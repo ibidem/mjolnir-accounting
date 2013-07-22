@@ -36,6 +36,8 @@
 					'
 						`id`             :key_primary,
 						`user`           :key_foreign,
+						`timestamp`      :datetime_required,
+						`date`           :datetime_required,
 						`journal`        :key_foreign,
 						`debit_account`  :key_foreign,
 						`credit_account` :key_foreign,
