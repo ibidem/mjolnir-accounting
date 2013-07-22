@@ -1,0 +1,27 @@
+{
+	"name": "mjolnir/accounting",
+	"version": "1.0",
+	"description": "Basic accounting utilities.",
+	"keywords": [ ],
+	"homepage": "https://github.com/ibidem",
+	"type": "library",
+	"license": "BSD-2",
+
+	"authors": [
+		{
+			"name": "srcspider",
+			"homepage": "https://github.com/srcspider"
+		}
+	],
+
+	"require": {
+		"php": ">=5.4.4"
+	},
+
+	"autoload": {
+		"psr-0": {
+			"mjolnir\\accounting": "../.."
+		}
+	}
+
+}
