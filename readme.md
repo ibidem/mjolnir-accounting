@@ -1,4 +1,4 @@
-THIS IS A PROTOTYPE
+**THIS IS A PROTOTYPE**
 
 At present the module exists only to facilitate work on it.
 
