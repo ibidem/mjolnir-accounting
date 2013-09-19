@@ -5,13 +5,7 @@
 				'database' => 'default',
 
 				// versions
-				'1.0.0' => \app\Pdx::gate
-					(
-						'mjolnir-accounting/1.0.0',
-						[
-							'mjolnir-database' => '1.0.0',
-						]
-					),
+				'1.0.0' => \app\Pdx::gate('mjolnir-accounting/install', ['mjolnir-database' => '1.0.0']),
 			),
 
 	); # config

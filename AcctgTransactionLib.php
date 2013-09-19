@@ -9,9 +9,7 @@
  */
 class AcctgTransactionLib
 {
-	use \app\Trait_Model_Factory;
-	use \app\Trait_Model_Utilities;
-	use \app\Trait_Model_Collection;
+	use \app\Trait_ModelLib;
 
 	/**
 	 * @return string
