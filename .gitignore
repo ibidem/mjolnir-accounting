@@ -1,7 +1,7 @@
 # Ignore temporary/contextual files
 +App/logs/*
 +App/cache/*
-+deprecated/+obsolete/*
++App/honeypot*
 
 # Composer junk
 plugins/*

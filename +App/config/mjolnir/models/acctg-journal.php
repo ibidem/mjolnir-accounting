@@ -7,8 +7,13 @@
 		'fields' => array
 			(
 				'id' => 'number',
+				'title' => 'string',
 			// user who created the transaction
-				'title' => 'string'
+				'user' => array
+					(
+						'driver' => 'reference',
+						'collection' => 'UserCollection'
+					),
 			),
 
-	);
+	); # config

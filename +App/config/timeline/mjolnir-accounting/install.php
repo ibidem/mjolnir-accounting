@@ -1,7 +1,7 @@
 <?php return array
 	(
 		'description'
-			=> 'Install for AcctgTAccount, AcctgJournal and AcctgTransaction.',
+			=> 'Install for AcctgTAccountTypeHint, AcctgTAccountType, AcctgTAccount, AcctgJournal, AcctgTransaction and AcctgTransactionOperation.',
 
 		'configure' => array
 			(
@@ -41,9 +41,12 @@
 					'
 						`id`        :key_primary,
 						`type`	    :key_foreign                         comment "Account type; used to determine place in formulas.",
-						`sign`      tinyint DEFAULT +1                   comment "Account value sign; used in formulas. Contra accounts have a negative sign.",
+						`title`     :title,
+						`sign`      tinyint DEFAULT +1                   comment "Account value sign; used in formulas. Contra accounts have -1, non-contra accounts have +1.",
+						`lft`       :counter                             comment "Left position in Nested Set.",
+						`rgt`       :counter                             comment "Right position in Nested Set.",
 
-						PRIMARY KEY(id)
+						PRIMARY KEY (id)
 					',
 
 				\app\AcctgJournalLib::table() =>
@@ -52,7 +55,7 @@
 						`title` :title                                   comment "Journal name.",
 						`user`  :key_foreign                             comment "User responsible for the creation of the journal.",
 
-						PRIMARY KEY(id)
+						PRIMARY KEY (id)
 					',
 
 				\app\AcctgTransactionLib::table() =>
@@ -60,19 +63,22 @@
 						`id`        :key_primary,
 						`journal`   :key_foreign                         comment "Journal transaction belongs to.",
 						`user`      :key_foreign                         comment "User responsible for the creation of the journal.",
+						`comments`  :block                               comment "Comments on the transaction.",
 						`date`      :datetime_required                   comment "Date assigned to transaction; user selected, as in classical accounting journal terms.",
 						`timestamp` :datetime_required                   comment "The real time the transaction was created for maintanence purposes.",
 
-						PRIMARY KEY(id)
+						PRIMARY KEY (id)
 					',
 
 				\app\AcctgTransactionOperationLib::table() =>
 					'
 						`id`           :key_primary,
-						`operation`    shortint DEFAULT 0                comment "Debit operation (-1) or Credit operation (1)"
-						`account`      :key_foreign                      comment "TAccount for the entry."
-						`amount_value` :currency                         comment "Ammount value."
-						`amount_type`  varchar(3) DEFAULT "USD"          comment "Amount type. By default USD. Operations wont convert; conversion will only happen globally."
+						`operation`    tinyint DEFAULT 0                 comment "Debit operation (-1) or Credit operation (+1)",
+						`taccount`     :key_foreign                      comment "TAccount for the entry.",
+						`amount_value` :currency                         comment "Ammount value.",
+						`amount_type`  varchar(3) DEFAULT "USD"          comment "Amount type. By default USD. Operations wont convert; conversion will only happen globally.",
+
+						PRIMARY KEY (id)
 					'
 			),
 
@@ -99,8 +105,39 @@
 					),
 				\app\AcctgTransactionOperationLib::table() => array
 					(
-						'account' => [\app\AcctgTransactionLib::table(), 'RESTRICT', 'CASCADE'],
+						'taccount' => [\app\AcctgTransactionLib::table(), 'RESTRICT', 'CASCADE'],
 					)
 			),
+
+		'populate' => function ($db)
+			{
+				// inject taccount type hints
+				$hints = \app\Arr::trim(\app\CFS::config('timeline/mjolnir-accounting/1.0.0/taccount-type-hints'));
+				\app\Pdx::massinsert
+					(
+						'mjolnir:accounting:inject-taccount-type-hints',
+						$db, \app\AcctgTAccountTypeHintLib::table(),
+						$hints,
+						[
+							'strs' => ['slugid', 'title'],
+						]
+					);
+
+				// inject taccount types
+				$taccount_type_hints = \app\Pdx::select($db, \app\AcctgTAccountTypeHintLib::table());
+				$hintmapping = \app\Arr::gatherkeys($taccount_type_hints, 'slugid', 'id');
+				$raw_taccount_types = \app\Arr::trim(\app\CFS::config('timeline/mjolnir-accounting/1.0.0/taccount-types'));
+				$taccount_types = \app\Arr::applymapping($raw_taccount_types, 'typehint', $hintmapping);
+				\app\Pdx::massinsert
+					(
+						'mjolnir:accounting:inject-taccount-types',
+						$db, \app\AcctgTAccountTypeLib::table(),
+						$taccount_types,
+						[
+							'nums' => ['typehint'],
+							'strs' => ['slugid', 'title'],
+						]
+					);
+			},
 
 	); # config
