@@ -9,14 +9,6 @@
  */
 class AcctgTAccountTypeHintLib
 {
-	use \app\Trait_ModelLib;
-
-	/**
-	 * @return string
-	 */
-	static function table()
-	{
-		return \app\AcctgTAccountTypeHintModel::table();
-	}
+	use \app\Trait_MarionetteLib;
 
 } # class

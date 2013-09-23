@@ -45,4 +45,13 @@ trait Trait_AcctgContext
 		return \app\AcctgTAccountLib::entries($page, $limit, $offset, $order, $constraints);
 	}
 
+	/**
+	 * @return array
+	 */
+	function acctgtypesmap()
+	{
+		$types = \app\AcctgTAccountTypeLib::entries(null, null);
+		return \app\Arr::tablemap($types, 'id');
+	}
+
 } # trait

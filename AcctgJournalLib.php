@@ -9,14 +9,6 @@
  */
 class AcctgJournalLib
 {
-	use \app\Trait_ModelLib;
-
-	/**
-	 * @return string
-	 */
-	static function table()
-	{
-		return \app\AcctgJournalModel::table();
-	}
+	use \app\Trait_MarionetteLib;
 
 } # class

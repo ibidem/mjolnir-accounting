@@ -14,4 +14,18 @@ class AcctgTAccountModel extends \app\MarionetteModel
 	 */
 	static $configfile = 'mjolnir/models/acctg-taccount';
 
+	/**
+	 * Normalizing value format, filling in optional components, etc.
+	 *
+	 * @return array normalized entry
+	 */
+	function parse(array $input)
+	{
+		isset($input['sign']) or $input['sign'] = +1;
+		isset($input['lft']) or $input['lft'] = null;
+		isset($input['rgt']) or $input['rgt'] = null;
+
+		return $input;
+	}
+
 } # class

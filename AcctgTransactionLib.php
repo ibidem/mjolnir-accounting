@@ -9,14 +9,6 @@
  */
 class AcctgTransactionLib
 {
-	use \app\Trait_ModelLib;
-
-	/**
-	 * @return string
-	 */
-	static function table()
-	{
-		return \app\AcctgTransactionModel::table();
-	}
+	use \app\Trait_MarionetteLib;
 
 } # class

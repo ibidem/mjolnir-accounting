@@ -43,8 +43,8 @@
 						`type`	    :key_foreign                         comment "Account type; used to determine place in formulas.",
 						`title`     :title,
 						`sign`      tinyint DEFAULT +1                   comment "Account value sign; used in formulas. Contra accounts have -1, non-contra accounts have +1.",
-						`lft`       :counter                             comment "Left position in Nested Set.",
-						`rgt`       :counter                             comment "Right position in Nested Set.",
+						`lft`       :nestedsetindex                      comment "Left position in Nested Set.",
+						`rgt`       :nestedsetindex                      comment "Right position in Nested Set.",
 
 						PRIMARY KEY (id)
 					',

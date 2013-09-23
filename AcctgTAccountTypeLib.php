@@ -9,15 +9,7 @@
  */
 class AcctgTAccountTypeLib
 {
-	use \app\Trait_ModelLib;
-
-	/**
-	 * @return string
-	 */
-	static function table()
-	{
-		return \app\AcctgTAccountTypeModel::table();
-	}
+	use \app\Trait_MarionetteLib;
 
 	// ------------------------------------------------------------------------
 	// Collection
