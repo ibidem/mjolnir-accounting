@@ -25,6 +25,11 @@ class AcctgTAccountModel extends \app\MarionetteModel
 		isset($input['lft']) or $input['lft'] = null;
 		isset($input['rgt']) or $input['rgt'] = null;
 
+		if (\is_string($input['sign']))
+		{
+			$input['sign'] = (int) $input['sign'];
+		}
+
 		return $input;
 	}
 

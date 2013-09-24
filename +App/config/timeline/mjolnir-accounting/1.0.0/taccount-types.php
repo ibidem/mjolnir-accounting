@@ -10,10 +10,10 @@
 				'title' => 'Cash',
 				'typehint' => 'assets-acct',
 			),
-		'banks' => array
+		'bank' => array
 			(
-				'slugid' => 'banks',
-				'title' => 'Banks',
+				'slugid' => 'bank',
+				'title' => 'Bank',
 				'typehint' => 'assets-acct',
 			),
 		'current-assets' => array
