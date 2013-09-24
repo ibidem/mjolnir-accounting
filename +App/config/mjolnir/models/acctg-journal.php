@@ -1,6 +1,7 @@
 <?php return array
 	(
 		'name' => 'acctg journal',
+		'table' => 'acctg__journals',
 
 		'key' => 'id',
 

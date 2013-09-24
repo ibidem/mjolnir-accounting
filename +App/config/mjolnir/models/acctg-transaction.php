@@ -1,6 +1,7 @@
 <?php return array
 	(
 		'name' => 'acctg transaction',
+		'table' => 'acctg__transactions',
 
 		'key' => 'id',
 

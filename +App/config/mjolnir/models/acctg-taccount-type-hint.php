@@ -1,6 +1,7 @@
 <?php return array
 	(
 		'name' => 'acctg taccount type hint',
+		'table' => 'acctg__taccount_type_hints',
 
 		'key' => 'id',
 

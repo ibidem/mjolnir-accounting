@@ -1,6 +1,7 @@
 <?php return array
 	(
 		'name' => 'acctg taccount',
+		'table' => 'acctg__taccounts',
 
 		'key' => 'id',
 
