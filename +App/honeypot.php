@@ -25,6 +25,12 @@ class AcctgJournalCollection extends \mjolnir\accounting\AcctgJournalCollection
 class AcctgJournalLib extends \mjolnir\accounting\AcctgJournalLib
 {
 	/** @return \app\Validator */
+	static function check(array $fields, $context = null) { return parent::check($fields, $context); }
+	/** @return \app\MarionetteModel */
+	static function marionette_model() { return parent::marionette_model(); }
+	/** @return \app\MarionetteCollection */
+	static function marionette_collection() { return parent::marionette_collection(); }
+	/** @return \app\Validator */
 	static function update_check($id, array $fields) { return parent::update_check($id, $fields); }
 	/** @return \app\SQLStatement */
 	static function statement($identifier, $sql, $lang = null) { return parent::statement($identifier, $sql, $lang); }
@@ -64,6 +70,12 @@ class AcctgTAccountCollection extends \mjolnir\accounting\AcctgTAccountCollectio
 
 class AcctgTAccountLib extends \mjolnir\accounting\AcctgTAccountLib
 {
+	/** @return \app\Validator */
+	static function check(array $fields, $context = null) { return parent::check($fields, $context); }
+	/** @return \app\MarionetteModel */
+	static function marionette_model() { return parent::marionette_model(); }
+	/** @return \app\MarionetteCollection */
+	static function marionette_collection() { return parent::marionette_collection(); }
 	/** @return \app\Validator */
 	static function update_check($id, array $fields) { return parent::update_check($id, $fields); }
 	/** @return \app\SQLStatement */
@@ -121,6 +133,12 @@ class AcctgTAccountTypeHintCollection extends \mjolnir\accounting\AcctgTAccountT
 class AcctgTAccountTypeHintLib extends \mjolnir\accounting\AcctgTAccountTypeHintLib
 {
 	/** @return \app\Validator */
+	static function check(array $fields, $context = null) { return parent::check($fields, $context); }
+	/** @return \app\MarionetteModel */
+	static function marionette_model() { return parent::marionette_model(); }
+	/** @return \app\MarionetteCollection */
+	static function marionette_collection() { return parent::marionette_collection(); }
+	/** @return \app\Validator */
 	static function update_check($id, array $fields) { return parent::update_check($id, $fields); }
 	/** @return \app\SQLStatement */
 	static function statement($identifier, $sql, $lang = null) { return parent::statement($identifier, $sql, $lang); }
@@ -144,6 +162,12 @@ class AcctgTAccountTypeHintModel extends \mjolnir\accounting\AcctgTAccountTypeHi
 
 class AcctgTAccountTypeLib extends \mjolnir\accounting\AcctgTAccountTypeLib
 {
+	/** @return \app\Validator */
+	static function check(array $fields, $context = null) { return parent::check($fields, $context); }
+	/** @return \app\MarionetteModel */
+	static function marionette_model() { return parent::marionette_model(); }
+	/** @return \app\MarionetteCollection */
+	static function marionette_collection() { return parent::marionette_collection(); }
 	/** @return \app\Validator */
 	static function update_check($id, array $fields) { return parent::update_check($id, $fields); }
 	/** @return \app\SQLStatement */
@@ -185,6 +209,12 @@ class AcctgTransactionCollection extends \mjolnir\accounting\AcctgTransactionCol
 class AcctgTransactionLib extends \mjolnir\accounting\AcctgTransactionLib
 {
 	/** @return \app\Validator */
+	static function check(array $fields, $context = null) { return parent::check($fields, $context); }
+	/** @return \app\MarionetteModel */
+	static function marionette_model() { return parent::marionette_model(); }
+	/** @return \app\MarionetteCollection */
+	static function marionette_collection() { return parent::marionette_collection(); }
+	/** @return \app\Validator */
 	static function update_check($id, array $fields) { return parent::update_check($id, $fields); }
 	/** @return \app\SQLStatement */
 	static function statement($identifier, $sql, $lang = null) { return parent::statement($identifier, $sql, $lang); }
@@ -224,6 +254,12 @@ class AcctgTransactionOperationCollection extends \mjolnir\accounting\AcctgTrans
 
 class AcctgTransactionOperationLib extends \mjolnir\accounting\AcctgTransactionOperationLib
 {
+	/** @return \app\Validator */
+	static function check(array $fields, $context = null) { return parent::check($fields, $context); }
+	/** @return \app\MarionetteModel */
+	static function marionette_model() { return parent::marionette_model(); }
+	/** @return \app\MarionetteCollection */
+	static function marionette_collection() { return parent::marionette_collection(); }
 	/** @return \app\Validator */
 	static function update_check($id, array $fields) { return parent::update_check($id, $fields); }
 	/** @return \app\SQLStatement */
