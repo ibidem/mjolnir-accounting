@@ -16,21 +16,33 @@ class AcctgTAccountLib
 	// Factory interface
 
 	/**
-	 * ...
+	 * Ensure fields, except lft, rtg
+	 */
+	static function ensure_fields($id, &$input)
+	{
+		// Ensure current fields are part of input
+		// ---------------------------------------
+
+		$entry = static::entry($id);
+
+		unset($entry[static::tree_lft()]);
+		unset($entry[static::tree_rgt()]);
+
+		$input = \app\Arr::merge($entry, $input);
+
+		// Ensure parent key is present
+		// ----------------------------
+
+		$prt = static::tree_parentkey();
+		isset($input[$prt]) or $input[$prt] = null;
+	}
+
+	/**
+	 * Prevent accidental code calls.
 	 */
 	static function process(array $input)
 	{
-		$fieldlist = static::fieldlist();
-
-		static::inserter
-			(
-				$input,
-				$fieldlist['strs'], $fieldlist['bools'], $fieldlist['nums']
-			)
-			->run();
-
-		// cleanup
-		static::clear_cache();
+		throw new \app\Exception('Hardcoded inserts not allowed. Please use tree_push.');
 	}
 
 	/**
@@ -64,7 +76,7 @@ class AcctgTAccountLib
 	static function tree_process(array $input)
 	{
 		$fieldlist = static::fieldlist();
-		
+
 		static::tree_inserter
 			(
 				$input,
@@ -110,6 +122,14 @@ class AcctgTAccountLib
 	}
 
 	/**
+	 * Prevent accidental code calls.
+	 */
+	static function update_process()
+	{
+		throw new \app\Exception('Hardcoded updates not allowed. Please use tree_update.');
+	}
+
+	/**
 	 * ...
 	 */
 	static function tree_update_process($id, array $input)
@@ -133,6 +153,7 @@ class AcctgTAccountLib
 	 */
 	static function tree_update($id, array $input)
 	{
+		static::ensure_fields($id, $input);
 		static::cleanup($input);
 
 		// check for errors
