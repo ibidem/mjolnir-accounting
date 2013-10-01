@@ -142,7 +142,10 @@ trait Trait_AcctgContext
 				'depth' # key in which to show the depth of the entry
 			);
 
-		$this->embed_action_handlers($entries);
+		foreach ($entries as &$entry)
+		{
+			$this->embed_handlers($entry);
+		}
 
 		return $entries;
 	}
@@ -156,16 +159,36 @@ trait Trait_AcctgContext
 			array $constraints = null
 		)
 	{
+		$subtreekey = 'subtaccounts';
+
 		$entries = \app\AcctgTAccountLib::tree_hierarchy
 			(
 				$page, $limit, $offset, $depth,
 				$constraints,
-				'subtaccounts' # keys for where to store subentries
+				$subtreekey # keys for where to store subentries
 			);
 
-		$this->embed_action_handlers($entries);
+		foreach ($entries as &$taccount)
+		{
+			$this->recusively_embed_handlers($taccount, $subtreekey);
+		}
 
 		return $entries;
+	}
+
+	/**
+	 * Adds handlers to entry and subaccounts.
+	 */
+	protected function recusively_embed_handlers(&$taccount, $subtreekey)
+	{
+		$this->embed_handlers($taccount);
+		if ( ! empty($taccount[$subtreekey]))
+		{
+			foreach ($taccount[$subtreekey] as &$subtaccount)
+			{
+				$this->recusively_embed_handlers($subtaccount, $subtreekey);
+			}
+		}
 	}
 
 	/**
@@ -197,21 +220,23 @@ trait Trait_AcctgContext
 	/**
 	 * ...
 	 */
-	protected function embed_action_handlers(array &$entries)
+	protected function embed_handlers(array &$entry)
 	{
-		#
-		# At any point you can invoke $entry['action']('an_action') to generate
-		# an apropriate form. Typically used in tables for actions on items.
-		#
+		$control_context = &$this;
 
-		$context = &$this;
-		foreach ($entries as & $entry)
-		{
-			$entry['action'] = function ($action) use ($entry, $context)
-				{
-					return $context->acctg_taccount_action($entry, $action);
-				};
-		}
+		// At any point you can invoke $entry['action']('an_action') to generate
+		// an apropriate form. Typically used in tables for actions on items.
+		$entry['action'] = function ($action) use ($entry, $control_context)
+			{
+				return $control_context->acctg_taccount_action($entry, $action);
+			};
+
+		// Similarly you can also call $entry['can']('an_action') for an access
+		// check on the action in question.
+		$entry['can'] = function ($action, $context = null, $attributes = null, $user_role = null) use ($entry, $control_context)
+			{
+				return $control_context->acctg_taccount_action($entry, $action, $context = null, $attributes = null, $user_role = null);
+			};
 	}
 
 	/**
@@ -229,6 +254,36 @@ trait Trait_AcctgContext
 					'action' => $action,
 					'id' => $entry['id']
 				]
+			);
+	}
+
+	/**
+	 * General purpose access control handler. Overwrite if you need to
+	 * integrate special parameters into the action or change the route.
+	 *
+	 * Note: access happens at the domain level so this handler is mostly used
+	 * for achieving a consistent visual representation.
+	 *
+	 * @return string action url
+	 */
+	protected function acctg_taccount_can($entry, $action, $context = null, $attributes = null, $user_role = null)
+	{
+		if (\is_string($action))
+		{
+			$action  = array
+				(
+					'action' => $action,
+					'id' => $entry['id']
+				);
+		}
+
+		return \app\Access::can
+			(
+				'taccount.public',
+				$action,
+				$context,
+				$attributes,
+				$user_role
 			);
 	}
 

@@ -33,4 +33,16 @@ class AcctgTAccountModel extends \app\MarionetteModel
 		return $input;
 	}
 
+	/**
+	 * @return \mjolnir\types\Validator
+	 */
+	function auditor()
+	{
+		$config = static::config();
+		$error_messages = isset($config['errors']) ? $config['errors'] : [];
+
+		return parent::auditor()
+			->adderrormessages($error_messages);
+	}
+
 } # class

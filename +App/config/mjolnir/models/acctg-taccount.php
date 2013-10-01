@@ -22,9 +22,13 @@
 			(
 				'new_parent' => array
 					(
-						'compatible_taccount_type' => \app\Lang::key('mjolnir:acctg/taccount/incompatible-taccount-type'),
-						'not_recursive' => \app\Lang::key('mjolnir:acctg/taccount/recusive-tree-move'),
+						'compatible-taccount-type' => \app\Lang::key('mjolnir:acctg/taccount/incompatible-taccount-type'),
+						'not-recursive' => \app\Lang::key('mjolnir:acctg/taccount/recusive-tree-move'),
 					),
+				'parent' => array
+					(
+						'valid-parent-type' => \app\Lang::key('mjolnir:acctg/taccount/incompatible-parent-type')
+					)
 			),
 
 	); # config

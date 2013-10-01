@@ -21,6 +21,7 @@ class AcctgTAccountLib
 	static function process(array $input)
 	{
 		$fieldlist = static::fieldlist();
+
 		static::inserter
 			(
 				$input,
@@ -35,9 +36,25 @@ class AcctgTAccountLib
 	/**
 	 * @return mjolnir\types\Validator
 	 */
-	static function tree_check(array $input, $context = null) {
+	static function tree_check(array $input, $context = null)
+	{
 		$validator = static::check($input);
 		static::tree_checks($validator, $input, $context);
+
+		// Ensure parent is of the same type
+		// ---------------------------------
+
+		$prt = static::tree_parentkey();
+		if ($input[$prt] !== null)
+		{
+			$parent = static::entry($input[$prt]);
+
+			if ($parent !== null)
+			{
+				$validator->rule($prt, 'valid-parent-type', $parent['type'] === $input['type']);
+			}
+		}
+
 		return $validator;
 	}
 
@@ -47,6 +64,7 @@ class AcctgTAccountLib
 	static function tree_process(array $input)
 	{
 		$fieldlist = static::fieldlist();
+		
 		static::tree_inserter
 			(
 				$input,
@@ -171,13 +189,13 @@ class AcctgTAccountLib
 				->rule
 					(
 						'new_parent',
-						'compatible_taccount_type',
+						'compatible-taccount-type',
 						static::compatible_taccount_type($input['taccount'], $input['new_parent'])
 					)
 				->rule
 					(
 						'new_parent',
-						'not_recursive',
+						'not-recursive',
 						// we are testing that the parent is NOT a child, so the bellow parameter order is correct
 						! static::tree_node_is_child_of_parent($input['new_parent'], $input['taccount'])
 					)
