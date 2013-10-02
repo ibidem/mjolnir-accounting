@@ -144,7 +144,7 @@ trait Trait_AcctgContext
 
 		foreach ($entries as &$entry)
 		{
-			$this->embed_handlers($entry);
+			$this->embed_taccount_handlers($entry);
 		}
 
 		return $entries;
@@ -170,7 +170,7 @@ trait Trait_AcctgContext
 
 		foreach ($entries as &$taccount)
 		{
-			$this->recusively_embed_handlers($taccount, $subtreekey);
+			$this->recusively_embed_taccount_handlers($taccount, $subtreekey);
 		}
 
 		return $entries;
@@ -179,14 +179,14 @@ trait Trait_AcctgContext
 	/**
 	 * Adds handlers to entry and subaccounts.
 	 */
-	protected function recusively_embed_handlers(&$taccount, $subtreekey)
+	protected function recusively_embed_taccount_handlers(&$taccount, $subtreekey)
 	{
-		$this->embed_handlers($taccount);
+		$this->embed_taccount_handlers($taccount);
 		if ( ! empty($taccount[$subtreekey]))
 		{
 			foreach ($taccount[$subtreekey] as &$subtaccount)
 			{
-				$this->recusively_embed_handlers($subtaccount, $subtreekey);
+				$this->recusively_embed_taccount_handlers($subtaccount, $subtreekey);
 			}
 		}
 	}
@@ -201,7 +201,7 @@ trait Trait_AcctgContext
 		)
 	{
 		$constraints !== null or $constraints = [];
-		$constraints = \app\Arr::merge($constraints, ['entry.lft' => [ '=' => 'entry.rgt - 1']]);
+		$constraints = \app\Arr::merge($constraints, ['entry.lft' => [ '=' => 'entry.rgt - 1' ]]);
 		return $this->acctgtaccounts($page, $limit, $offset, null, $constraints);
 	}
 
@@ -214,28 +214,162 @@ trait Trait_AcctgContext
 		return \app\Arr::tablemap($types, 'id');
 	}
 
+	/**
+	 * @return array
+	 */
+	function acctgjournals
+		(
+			$page = null, $limit = null, $offset = 0,
+			array $order = null, array $constraints = null
+		)
+	{
+		$entries = \app\AcctgJournalLib::entries
+			(
+				$page, $limit, $offset,
+				$order, $constraints
+			);
+
+		foreach ($entries as &$entry)
+		{
+			$this->embed_journal_handlers($entry);
+		}
+
+		return $entries;
+	}
+
+	/**
+	 * @return array
+	 */
+	function acctgtransactions_hierarchical
+		(
+			$journal_id,
+			$page = null, $limit = null, $offset = 0,
+			array $order = null, array $constraints = null
+		)
+	{
+		$constraints['journal'] = $journal_id;
+
+		// @todo CLEANUP look into optimization oportunities for this method
+
+		#
+		# The following implementation is intentionally crute and simple.
+		#
+
+		// Retrieve transactions
+		// ---------------------
+
+		$transactions = \app\AcctgTransactionLib::entries
+			(
+				$page, $limit, $offset,
+				$order, $constraints
+			);
+
+		// Retrieve operations
+		// -------------------
+
+		foreach ($transactions as &$transaction)
+		{
+			$transaction['operations'] = $this->acctgoperations($transaction['id']);
+		}
+
+		// Create year -> month-day -> operations hierarchy
+		// ------------------------------------------------
+
+		// this hierarchical structure is meant to emulate pen and paper
+		// journals as closely as possible
+
+		$hierarchy = [];
+
+		foreach ($transactions as $transaction)
+		{
+			// ensure structure is present
+			$year = $transaction['date']->format('Y');
+			$month = $transaction['date']->format('m');
+			$day = $transaction['date']->format('d');
+			isset($hierarchy[$year]) or $hierarchy[$year] = [];
+			isset($hierarchy[$year][$month]) or $hierarchy[$year][$month] = [];
+			isset($hierarchy[$year][$month][$day]) or $hierarchy[$year][$month][$day] = [];
+
+			// save entry under specific date
+			$hierarchy[$year][$month][$day][] = $transaction;
+		}
+
+		return $hierarchy;
+	}
+
+	/**
+	 * @return array
+	 */
+	function acctgoperations
+		(
+			$transaction_id,
+			$page = null, $limit = null, $offset = 0,
+			array $order = null, array $constraints = null
+		)
+	{
+		$constraints['transaction'] = $transaction_id;
+
+		$operations = \app\AcctgTransactionOperationLib::entries
+			(
+				$page, $limit, $offset,
+				$order, $constraints
+			);
+
+		return $operations;
+	}
+
+	/**
+	 * @return array
+	 */
+	function acctgtaccount($id)
+	{
+		return \app\AcctgTAccountLib::entry($id);
+	}
+
 	// ------------------------------------------------------------------------
 	// Entry Actions
 
 	/**
 	 * ...
 	 */
-	protected function embed_handlers(array &$entry)
+	protected function embed_journal_handlers(array &$journal)
 	{
 		$control_context = &$this;
 
 		// At any point you can invoke $entry['action']('an_action') to generate
 		// an apropriate form. Typically used in tables for actions on items.
-		$entry['action'] = function ($action) use ($entry, $control_context)
+		$journal['action'] = function ($action) use ($journal, $control_context)
 			{
-				return $control_context->acctg_taccount_action($entry, $action);
+				return $control_context->acctg_journal_action($journal, $action);
 			};
 
 		// Similarly you can also call $entry['can']('an_action') for an access
 		// check on the action in question.
-		$entry['can'] = function ($action, $context = null, $attributes = null, $user_role = null) use ($entry, $control_context)
+		$journal['can'] = function ($action, $context = null, $attributes = null, $user_role = null) use ($journal, $control_context)
 			{
-				return $control_context->acctg_taccount_action($entry, $action, $context = null, $attributes = null, $user_role = null);
+				return $control_context->acctg_journal_can($journal, $action, $context = null, $attributes = null, $user_role = null);
+			};
+	}
+
+	/**
+	 * ...
+	 */
+	protected function embed_taccount_handlers(array &$taccount)
+	{
+		$control_context = &$this;
+
+		// At any point you can invoke $entry['action']('an_action') to generate
+		// an apropriate form. Typically used in tables for actions on items.
+		$taccount['action'] = function ($action) use ($taccount, $control_context)
+			{
+				return $control_context->acctg_taccount_action($taccount, $action);
+			};
+
+		// Similarly you can also call $entry['can']('an_action') for an access
+		// check on the action in question.
+		$taccount['can'] = function ($action, $context = null, $attributes = null, $user_role = null) use ($taccount, $control_context)
+			{
+				return $control_context->acctg_taccount_can($taccount, $action, $context = null, $attributes = null, $user_role = null);
 			};
 	}
 
@@ -280,6 +414,54 @@ trait Trait_AcctgContext
 		return \app\Access::can
 			(
 				'taccount.public',
+				$action,
+				$context,
+				$attributes,
+				$user_role
+			);
+	}
+
+	/**
+	 * General purpose action handler. Overwrite if you need to integrate
+	 * special parameters into the action or change the route.
+	 *
+	 * @return string action url
+	 */
+	protected function acctg_journal_action($entry, $action)
+	{
+		return \app\URL::href
+			(
+				'journal.public',
+				[
+					'action' => $action,
+					'id' => $entry['id']
+				]
+			);
+	}
+
+	/**
+	 * General purpose access control handler. Overwrite if you need to
+	 * integrate special parameters into the action or change the route.
+	 *
+	 * Note: access happens at the domain level so this handler is mostly used
+	 * for achieving a consistent visual representation.
+	 *
+	 * @return string action url
+	 */
+	protected function acctg_journal_can($entry, $action, $context = null, $attributes = null, $user_role = null)
+	{
+		if (\is_string($action))
+		{
+			$action  = array
+				(
+					'action' => $action,
+					'id' => $entry['id']
+				);
+		}
+
+		return \app\Access::can
+			(
+				'journal.public',
 				$action,
 				$context,
 				$attributes,

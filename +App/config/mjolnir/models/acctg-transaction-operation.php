@@ -8,9 +8,10 @@
 		'fields' => array
 			(
 				'id' => 'number',
-			// debit = -1, credit = +1
-				'operation' => 'number',
-			// the date for which the transaction was recorded
+			// debit = +1, credit = -1
+			// logic: think of Dr/Cr as they affect asset accounts
+				'type' => 'number',
+			// the account for which the transaction was recorded
 				'taccount' => array
 					(
 						'driver' => 'reference',
