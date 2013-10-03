@@ -58,7 +58,7 @@ trait Trait_AcctgContext
 	{
 		$indenter !== null or $indenter = ' &mdash; ';
 		$accountslabel !== null or $accountslabel = \app\Lang::term('Accounts');
-		$blanklabel !== null or $blanklabel = '- '.\app\Lang::term('no parent').' -';
+		$blanklabel !== null or $blanklabel = '- '.\app\Lang::term('select account').' -';
 		$blankkey !== null or $blankkey = '';
 
 		$options = array
@@ -264,6 +264,12 @@ trait Trait_AcctgContext
 				$order, $constraints
 			);
 
+		// embed handlers
+		foreach ($transactions as &$transaction)
+		{
+			$this->embed_transaction_handlers($transaction);
+		}
+
 		// Retrieve operations
 		// -------------------
 
@@ -280,7 +286,7 @@ trait Trait_AcctgContext
 
 		$hierarchy = [];
 
-		foreach ($transactions as $transaction)
+		foreach ($transactions as &$transaction)
 		{
 			// ensure structure is present
 			$year = $transaction['date']->format('Y');
@@ -332,6 +338,28 @@ trait Trait_AcctgContext
 	/**
 	 * ...
 	 */
+	protected function embed_taccount_handlers(array &$taccount)
+	{
+		$control_context = &$this;
+
+		// At any point you can invoke $entry['action']('an_action') to generate
+		// an apropriate form. Typically used in tables for actions on items.
+		$taccount['action'] = function ($action) use ($taccount, $control_context)
+			{
+				return $control_context->acctg_taccount_action($taccount, $action);
+			};
+
+		// Similarly you can also call $entry['can']('an_action') for an access
+		// check on the action in question.
+		$taccount['can'] = function ($action, $context = null, $attributes = null, $user_role = null) use ($taccount, $control_context)
+			{
+				return $control_context->acctg_taccount_can($taccount, $action, $context = null, $attributes = null, $user_role = null);
+			};
+	}
+
+	/**
+	 * ...
+	 */
 	protected function embed_journal_handlers(array &$journal)
 	{
 		$control_context = &$this;
@@ -354,22 +382,22 @@ trait Trait_AcctgContext
 	/**
 	 * ...
 	 */
-	protected function embed_taccount_handlers(array &$taccount)
+	protected function embed_transaction_handlers(array &$transaction)
 	{
 		$control_context = &$this;
 
 		// At any point you can invoke $entry['action']('an_action') to generate
 		// an apropriate form. Typically used in tables for actions on items.
-		$taccount['action'] = function ($action) use ($taccount, $control_context)
+		$transaction['action'] = function ($action) use ($transaction, $control_context)
 			{
-				return $control_context->acctg_taccount_action($taccount, $action);
+				return $control_context->acctg_transaction_action($transaction, $action);
 			};
 
 		// Similarly you can also call $entry['can']('an_action') for an access
 		// check on the action in question.
-		$taccount['can'] = function ($action, $context = null, $attributes = null, $user_role = null) use ($taccount, $control_context)
+		$transaction['can'] = function ($action, $context = null, $attributes = null, $user_role = null) use ($transaction, $control_context)
 			{
-				return $control_context->acctg_taccount_can($taccount, $action, $context = null, $attributes = null, $user_role = null);
+				return $control_context->acctg_transaction_can($transaction, $action, $context = null, $attributes = null, $user_role = null);
 			};
 	}
 
@@ -383,7 +411,7 @@ trait Trait_AcctgContext
 	{
 		return \app\URL::href
 			(
-				'taccount.public',
+				'acctg-taccount.public',
 				[
 					'action' => $action,
 					'id' => $entry['id']
@@ -413,7 +441,7 @@ trait Trait_AcctgContext
 
 		return \app\Access::can
 			(
-				'taccount.public',
+				'acctg-taccount.public',
 				$action,
 				$context,
 				$attributes,
@@ -431,7 +459,7 @@ trait Trait_AcctgContext
 	{
 		return \app\URL::href
 			(
-				'journal.public',
+				'acctg-journal.public',
 				[
 					'action' => $action,
 					'id' => $entry['id']
@@ -461,7 +489,55 @@ trait Trait_AcctgContext
 
 		return \app\Access::can
 			(
-				'journal.public',
+				'acctg-journal.public',
+				$action,
+				$context,
+				$attributes,
+				$user_role
+			);
+	}
+
+	/**
+	 * General purpose action handler. Overwrite if you need to integrate
+	 * special parameters into the action or change the route.
+	 *
+	 * @return string action url
+	 */
+	protected function acctg_transaction_action($entry, $action)
+	{
+		return \app\URL::href
+			(
+				'acctg-trasaction.public',
+				[
+					'action' => $action,
+					'id' => $entry['id']
+				]
+			);
+	}
+
+	/**
+	 * General purpose access control handler. Overwrite if you need to
+	 * integrate special parameters into the action or change the route.
+	 *
+	 * Note: access happens at the domain level so this handler is mostly used
+	 * for achieving a consistent visual representation.
+	 *
+	 * @return string action url
+	 */
+	protected function acctg_transaction_can($entry, $action, $context = null, $attributes = null, $user_role = null)
+	{
+		if (\is_string($action))
+		{
+			$action  = array
+				(
+					'action' => $action,
+					'id' => $entry['id']
+				);
+		}
+
+		return \app\Access::can
+			(
+				'acctg-transaction.public',
 				$action,
 				$context,
 				$attributes,

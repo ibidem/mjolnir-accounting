@@ -22,7 +22,7 @@
 		);
 ?>
 
-<table class="acctg-journal-table">
+<table class="table table-condensed acctg-journal-table">
 
 	<thead class="acctg-journal-head">
 		<tr>
@@ -56,7 +56,6 @@
 				<? foreach ($days as $day => $transactions): ?>
 					<? foreach ($transactions as $transaction): ?>
 						<tbody class="acctg-journal-table--transaction-tbody">
-							<? $opcount = \count($transaction['operations']) ?>
 							<? $first_operation = true; ?>
 							<? foreach ($transaction['operations'] as $operation): ?>
 								<tr>
@@ -79,7 +78,8 @@
 											<? endif; ?>
 										</td>
 										<td>
-											#<?= $transaction['id'] ?>
+											<? \var_dump($transaction); die; ?>
+											#<a href="<?= $transaction['action'](null) ?>"><?= $transaction['id'] ?></a>
 										</td>
 									<? else: # not first row ?>
 										<td colspan="3">&nbsp;</td>
@@ -107,11 +107,13 @@
 									<td class="acctg-journal-table--operation-memo">
 										<?= $operation['memo'] ?>
 									</td>
+									<td>&nbsp;</td>
 								</tr>
 							<? endforeach; ?>
 							<tr class="acctg-journal-table--comment-row">
 								<td colspan="3">&nbsp;</td>
-								<td><i><?= $transaction['memo'] ?></i></td>
+								<td style="text-align: center;"><i><?= $transaction['memo'] ?></i></td>
+								<td colspan="4">&nbsp;</td>
 							</tr>
 							<tr class="acctg-journal-table--delimiter-row">
 								<td colspan="8">&nbsp;</td>
