@@ -73,7 +73,7 @@
 				\app\AcctgTransactionOperationLib::table() =>
 					'
 						`id`           :key_primary,
-						`transaction`  :key_foreign,                     comment "The transaction for which the operation was performed."
+						`transaction`  :key_foreign                      comment "The transaction for which the operation was performed.",
 						`type`         tinyint DEFAULT 0                 comment "Debit operation (+1) or Credit operation (-1). Logic: Cr/Dr effect on asset accounts",
 						`taccount`     :key_foreign                      comment "TAccount with which the transaction is associated.",
 						`amount_value` :currency                         comment "Ammount value.",
