@@ -78,7 +78,7 @@
 						`taccount`     :key_foreign                      comment "TAccount with which the transaction is associated.",
 						`amount_value` :currency                         comment "Ammount value.",
 						`amount_type`  varchar(3) DEFAULT "USD"          comment "Amount type. By default USD. Operations wont convert; conversion will only happen globally.",
-						`memo`         :block                            comment "Operation details.",
+						`note`         :block                            comment "Operation details.",
 
 						PRIMARY KEY (id)
 					'

@@ -19,6 +19,8 @@
 					),
 			// the amout moved by the operation
 				'amount' => [ 'driver' => 'currency' ],
+			// a note on the operation
+				'note' => 'string',
 			),
 
 	); # config
