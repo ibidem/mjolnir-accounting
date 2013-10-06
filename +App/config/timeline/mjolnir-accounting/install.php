@@ -60,12 +60,12 @@
 
 				\app\AcctgTransactionLib::table() =>
 					'
-						`id`        :key_primary,
-						`journal`   :key_foreign                         comment "Journal transaction belongs to.",
-						`user`      :key_foreign                         comment "User responsible for the creation of the journal.",
-						`memo`      :block                               comment "Comments on the transaction.",
-						`date`      :datetime_required                   comment "Date assigned to transaction; user selected, as in classical accounting journal terms.",
-						`timestamp` :datetime_required                   comment "The real time the transaction was created for maintanence purposes.",
+						`id`          :key_primary,
+						`journal`     :key_foreign                       comment "Journal transaction belongs to.",
+						`user`        :key_foreign                       comment "User responsible for the creation of the journal.",
+						`description` :block                             comment "Comments on the transaction.",
+						`date`        :datetime_required                 comment "Date assigned to transaction; user selected, as in classical accounting journal terms.",
+						`timestamp`   :datetime_required                 comment "The real time the transaction was created for maintanence purposes.",
 
 						PRIMARY KEY (id)
 					',
