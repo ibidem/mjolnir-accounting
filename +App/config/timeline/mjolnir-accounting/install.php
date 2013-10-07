@@ -60,12 +60,12 @@
 
 				\app\AcctgTransactionLib::table() =>
 					'
-						`id`        :key_primary,
-						`journal`   :key_foreign                         comment "Journal transaction belongs to.",
-						`user`      :key_foreign                         comment "User responsible for the creation of the journal.",
-						`comments`  :block                               comment "Comments on the transaction.",
-						`date`      :datetime_required                   comment "Date assigned to transaction; user selected, as in classical accounting journal terms.",
-						`timestamp` :datetime_required                   comment "The real time the transaction was created for maintanence purposes.",
+						`id`          :key_primary,
+						`journal`     :key_foreign                       comment "Journal transaction belongs to.",
+						`user`        :key_foreign                       comment "User responsible for the creation of the journal.",
+						`description` :block                             comment "Comments on the transaction.",
+						`date`        :datetime_required                 comment "Date assigned to transaction; user selected, as in classical accounting journal terms.",
+						`timestamp`   :datetime_required                 comment "The real time the transaction was created for maintanence purposes.",
 
 						PRIMARY KEY (id)
 					',
@@ -73,10 +73,12 @@
 				\app\AcctgTransactionOperationLib::table() =>
 					'
 						`id`           :key_primary,
-						`operation`    tinyint DEFAULT 0                 comment "Debit operation (-1) or Credit operation (+1)",
-						`taccount`     :key_foreign                      comment "TAccount for the entry.",
+						`transaction`  :key_foreign                      comment "The transaction for which the operation was performed.",
+						`type`         tinyint DEFAULT 0                 comment "Debit operation (+1) or Credit operation (-1). Logic: Cr/Dr effect on asset accounts",
+						`taccount`     :key_foreign                      comment "TAccount with which the transaction is associated.",
 						`amount_value` :currency                         comment "Ammount value.",
 						`amount_type`  varchar(3) DEFAULT "USD"          comment "Amount type. By default USD. Operations wont convert; conversion will only happen globally.",
+						`note`         :block                            comment "Operation details.",
 
 						PRIMARY KEY (id)
 					'
@@ -105,7 +107,8 @@
 					),
 				\app\AcctgTransactionOperationLib::table() => array
 					(
-						'taccount' => [\app\AcctgTransactionLib::table(), 'RESTRICT', 'CASCADE'],
+						'transaction' => [\app\AcctgTransactionLib::table(), 'RESTRICT', 'CASCADE'],
+						'taccount' => [\app\AcctgTAccountLib::table(), 'RESTRICT', 'CASCADE'],
 					)
 			),
 

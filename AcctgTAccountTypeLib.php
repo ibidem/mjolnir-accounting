@@ -40,4 +40,12 @@ class AcctgTAccountTypeLib
 			->fetch_all();
 	}
 
+	/**
+	 * @return array
+	 */
+	static function typemap()
+	{
+		return \app\Arr::gatherkeys(static::entries(), 'slugid', 'id');
+	}
+
 } # class

@@ -11,4 +11,12 @@ class AcctgTransactionLib
 {
 	use \app\Trait_MarionetteLib;
 
+	/**
+	 * @return \mjolnir\types\Validator
+	 */
+	static function integrity_validator($input, $context = null)
+	{
+		return \app\Validator::instance($input);
+	}
+
 } # class

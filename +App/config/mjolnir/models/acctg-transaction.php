@@ -21,7 +21,7 @@
 						'collection' => 'UserCollection'
 					),
 			// details on transaction
-				'comments' => 'string',
+				'description' => 'string',
 			// the date for which the transaction was recorded
 				'date' => 'datetime',
 			// the date the transaction was recorded on
