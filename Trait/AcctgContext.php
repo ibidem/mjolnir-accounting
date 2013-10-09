@@ -37,28 +37,6 @@ trait Trait_AcctgContext
 		return $taccount;
 	}
 
-	/**
-	 * @return string
-	 */
-	function acctgcurrentdriver()
-	{
-		return $this->param('driver', null);
-	}
-
-	/**
-	 * @return string
-	 */
-	function acctgproceduredriver($context = null)
-	{
-		$context !== null or $context = $this;
-
-		$class = '\app\AcctgProcedure_';
-		$currentdriver = $this->acctgcurrentdriver();
-		$class .= \str_replace(' ', '', \ucwords(\str_replace('-', ' ', $currentdriver)));
-
-		return $class::instance($context);
-	}
-
 	// ------------------------------------------------------------------------
 	// Internal
 
@@ -277,21 +255,6 @@ trait Trait_AcctgContext
 		return $operations;
 	}
 
-	/**
-	 * @return array operations
-	 */
-	function acctgprocedures()
-	{
-		$procedures = \app\CFS::config('mjolnir/acctg/procedures');
-
-		foreach ($procedures as $driver => &$procedure)
-		{
-			$this->embed_procedure_handlers($procedure, $driver);
-		}
-
-		return $procedures;
-	}
-
 	// ------------------------------------------------------------------------
 	// Form Helpers
 
@@ -400,28 +363,6 @@ trait Trait_AcctgContext
 
 	// ------------------------------------------------------------------------
 	// Entry Actions
-
-	/**
-	 * ...
-	 */
-	protected function embed_procedure_handlers(array &$procedure, $driver)
-	{
-		$control_context = &$this;
-
-		// At any point you can invoke $entry['action']('an_action') to generate
-		// an apropriate form. Typically used in tables for actions on items.
-		$procedure['action'] = function ($action) use ($procedure, $control_context, $driver)
-			{
-				return $control_context->acctg_procedure_action($procedure, $driver, $action);
-			};
-
-		// Similarly you can also call $entry['can']('an_action') for an access
-		// check on the action in question.
-		$procedure['can'] = function ($action, $context = null, $attributes = null, $user_role = null) use ($procedure, $control_context, $driver)
-			{
-				return $control_context->acctg_procedure_can($procedure, $driver, $action, $context = null, $attributes = null, $user_role = null);
-			};
-	}
 
 	/**
 	 * ...
@@ -638,55 +579,6 @@ trait Trait_AcctgContext
 		return \app\Access::can
 			(
 				$rmap['acctg-transaction.public'],
-				$action,
-				$context,
-				$attributes,
-				$user_role
-			);
-	}
-
-	/**
-	 * @return string action url
-	 */
-	protected function acctg_procedure_action($procedure, $driver, $action)
-	{
-		$rmap = $this->acctgroutemap();
-
-		return \app\URL::href
-			(
-				$rmap['acctg-procedure.public'],
-				[
-					'driver' => $driver,
-					'action' => $action
-				]
-			);
-	}
-
-	/**
-	 * General purpose access control handler. Overwrite if you need to
-	 * integrate special parameters into the action or change the route.
-	 *
-	 * Note: access happens at the domain level so this handler is mostly used
-	 * for achieving a consistent visual representation.
-	 *
-	 * @return string action url
-	 */
-	protected function acctg_procedure_can($procedure, $driver, $action, $context = null, $attributes = null, $user_role = null)
-	{
-		$rmap = $this->acctgroutemap();
-
-		if (\is_string($action))
-		{
-			$action  = array
-				(
-					'driver' => $driver,
-					'action' => $action,
-				);
-		}
-
-		return \app\Access::can
-			(
-				$rmap['acctg-procedure.public'],
 				$action,
 				$context,
 				$attributes,

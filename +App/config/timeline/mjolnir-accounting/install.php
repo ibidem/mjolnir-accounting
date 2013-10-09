@@ -51,9 +51,10 @@
 
 				\app\AcctgJournalLib::table() =>
 					'
-						`id`    :key_primary,
-						`title` :title                                   comment "Journal name.",
-						`user`  :key_foreign                             comment "User responsible for the creation of the journal.",
+						`id`        :key_primary,
+						`title`     :title                               comment "Journal name.",
+						`user`      :key_foreign                         comment "User responsible for the creation of the journal.",
+						`protected` boolean                              comment "Some journals (eg. system journals) are protected; meaning they may not be deleted.",
 
 						PRIMARY KEY (id)
 					',
@@ -62,6 +63,7 @@
 					'
 						`id`          :key_primary,
 						`journal`     :key_foreign                       comment "Journal transaction belongs to.",
+						`method`      :identifier DEFAULT "raw"          comment "Method by which the entry was created. Only used in journal maintenance and entry migrations."
 						`user`        :key_foreign                       comment "User responsible for the creation of the journal.",
 						`description` :block                             comment "Comments on the transaction.",
 						`date`        :datetime_required                 comment "Date assigned to transaction; user selected, as in classical accounting journal terms.",
