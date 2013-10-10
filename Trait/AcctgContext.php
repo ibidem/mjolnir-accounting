@@ -245,6 +245,7 @@ trait Trait_AcctgContext
 		)
 	{
 		$constraints['transaction'] = $transaction_id;
+		$order['type'] = 'desc';
 
 		$operations = \app\AcctgTransactionOperationLib::entries
 			(

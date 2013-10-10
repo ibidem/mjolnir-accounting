@@ -32,4 +32,12 @@ class AcctgJournalLib
 		static::clear_cache();
 	}
 
+	/**
+	 * @return int
+	 */
+	static function namedjournal($slugid)
+	{
+		return static::find_entry(['slugid' => $slugid])['id'];
+	}
+
 } # class

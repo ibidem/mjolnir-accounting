@@ -9,6 +9,8 @@
 			(
 				'id' => 'number',
 				'title' => 'string',
+				'slugid' => 'string',
+				'protected' => 'boolean',
 			// user who created the transaction
 				'user' => array
 					(
