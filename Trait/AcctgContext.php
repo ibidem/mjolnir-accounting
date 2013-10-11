@@ -147,6 +147,14 @@ trait Trait_AcctgContext
 	/**
 	 * @return array
 	 */
+	function acctgjournal($journal_id)
+	{
+		return \app\AcctgJournalLib::entry($journal_id);
+	}
+
+	/**
+	 * @return array
+	 */
 	function acctgjournals
 		(
 			$page = null, $limit = null, $offset = 0,
@@ -254,6 +262,14 @@ trait Trait_AcctgContext
 			);
 
 		return $operations;
+	}
+
+	/**
+	 * @return array
+	 */
+	function acctgtransactionlog()
+	{
+		return \app\AcctgTransactionLib::entries(null, null, 0, ['timestamp' => 'desc']);
 	}
 
 	// ------------------------------------------------------------------------

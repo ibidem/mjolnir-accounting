@@ -16,4 +16,9 @@
 					),
 			),
 
+		'transaction-method' => array
+			(
+				'manual' => 'Manual',
+			),
+
 	); # config

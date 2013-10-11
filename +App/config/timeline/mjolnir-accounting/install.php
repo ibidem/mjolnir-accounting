@@ -12,7 +12,8 @@
 						\app\AcctgTAccountLib::table(),
 						\app\AcctgJournalLib::table(),
 						\app\AcctgTransactionLib::table(),
-						\app\AcctgTransactionOperationLib::table()
+						\app\AcctgTransactionOperationLib::table(),
+						\app\AcctgSettingsLib::table(),
 					),
 			),
 
@@ -64,7 +65,7 @@
 					'
 						`id`          :key_primary,
 						`journal`     :key_foreign                       comment "Journal transaction belongs to.",
-						`method`      :identifier DEFAULT "raw"          comment "Method by which the entry was created. Only used in journal maintenance and entry migrations.",
+						`method`      :identifier DEFAULT "manual"       comment "Method by which the entry was created. Only used in journal maintenance and entry migrations.",
 						`user`        :key_foreign                       comment "User responsible for the creation of the journal.",
 						`description` :block                             comment "Comments on the transaction.",
 						`date`        :datetime_required                 comment "Date assigned to transaction; user selected, as in classical accounting journal terms.",
@@ -84,6 +85,13 @@
 						`note`         :block                            comment "Operation details.",
 
 						PRIMARY KEY (id)
+					',
+
+				\app\AcctgSettingsLib::table() =>
+					'
+						`id`       :key_primary,
+						`slugid`   :identifier,
+						`taccount` :key_foreign,
 					'
 			),
 
@@ -111,6 +119,10 @@
 				\app\AcctgTransactionOperationLib::table() => array
 					(
 						'transaction' => [\app\AcctgTransactionLib::table(), 'RESTRICT', 'CASCADE'],
+						'taccount' => [\app\AcctgTAccountLib::table(), 'RESTRICT', 'CASCADE'],
+					),
+				\app\AcctgSettingsLib::table() => array
+					(
 						'taccount' => [\app\AcctgTAccountLib::table(), 'RESTRICT', 'CASCADE'],
 					)
 			),
@@ -142,6 +154,17 @@
 						[
 							'nums' => ['typehint'],
 							'strs' => ['slugid', 'title'],
+						]
+					);
+
+				// inject default system ledger
+				\app\AcctgJournalLib::push
+					(
+						[
+							'title' => 'General Ledger',
+							'slugid' => 'system-ledger',
+							'protected' => true,
+							'user' => null,
 						]
 					);
 			},
