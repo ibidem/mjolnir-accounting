@@ -7,7 +7,6 @@
 			(
 				'tables' => array
 					(
-						\app\AcctgTAccountTypeHintLib::table(),
 						\app\AcctgTAccountTypeLib::table(),
 						\app\AcctgTAccountLib::table(),
 						\app\AcctgJournalLib::table(),
@@ -19,21 +18,15 @@
 
 		'tables' => array
 			(
-				\app\AcctgTAccountTypeHintLib::table() =>
-					'
-						`id`       :key_primary,
-						`slugid`   :slugid                               comment "Identifier for use when referencing in code.",
-						`title`    :title                                comment "Type unique and clean name.",
-
-						PRIMARY KEY (id)
-					',
-
 				\app\AcctgTAccountTypeLib::table() =>
 					'
-						`id`       :key_primary,
-						`slugid`   :slugid	                             comment "Identifier for use when referencing in code.",
-						`title`    :title                                comment "Type unique and clean name.",
-						`typehint` :key_foreign                          comment "Pseudo-category name for use in user interfaces.",
+						`id`     :key_primary,
+						`slugid` :slugid	                             comment "Identifier for use when referencing in code.",
+						`title`  :title                                  comment "Type unique and clean name.",
+						`sign`   tinyint DEFAULT +1                      comment "Formula sign, relative to parent account. (root types have +1)",
+						`usable` :boolean                                comment "Usable indicates that the type is a hard type and not a logical type",
+						`lft`    :nestedsetindex                         comment "Left position in Nested Set.",
+						`rgt`    :nestedsetindex                         comment "Right position in Nested Set.",
 
 						PRIMARY KEY (id)
 					',
@@ -92,6 +85,8 @@
 						`id`       :key_primary,
 						`slugid`   :identifier,
 						`taccount` :key_foreign,
+
+						PRIMARY KEY (id)
 					'
 			),
 
@@ -99,10 +94,6 @@
 			(
 				// field => [ table, on_delete, on_update ]
 
-				\app\AcctgTAccountTypeLib::table() => array
-					(
-						'typehint' => [\app\AcctgTAccountTypeHintLib::table(), 'RESTRICT', 'CASCADE'],
-					),
 				\app\AcctgTAccountLib::table() => array
 					(
 						'type' => [\app\AcctgTAccountTypeLib::table(), 'SET NULL', 'CASCADE'],
@@ -129,44 +120,8 @@
 
 		'populate' => function ($db)
 			{
-				// inject taccount type hints
-				$hints = \app\Arr::trim(\app\CFS::config('timeline/mjolnir-accounting/1.0.0/taccount-type-hints'));
-				\app\Pdx::massinsert
-					(
-						'mjolnir:accounting:inject-taccount-type-hints',
-						$db, \app\AcctgTAccountTypeHintLib::table(),
-						$hints,
-						[
-							'strs' => ['slugid', 'title'],
-						]
-					);
-
-				// inject taccount types
-				$taccount_type_hints = \app\Pdx::select($db, \app\AcctgTAccountTypeHintLib::table());
-				$hintmapping = \app\Arr::gatherkeys($taccount_type_hints, 'slugid', 'id');
-				$raw_taccount_types = \app\Arr::trim(\app\CFS::config('timeline/mjolnir-accounting/1.0.0/taccount-types'));
-				$taccount_types = \app\Arr::applymapping($raw_taccount_types, 'typehint', $hintmapping);
-				\app\Pdx::massinsert
-					(
-						'mjolnir:accounting:inject-taccount-types',
-						$db, \app\AcctgTAccountTypeLib::table(),
-						$taccount_types,
-						[
-							'nums' => ['typehint'],
-							'strs' => ['slugid', 'title'],
-						]
-					);
-
-				// inject default system ledger
-				\app\AcctgJournalLib::push
-					(
-						[
-							'title' => 'General Ledger',
-							'slugid' => 'system-ledger',
-							'protected' => true,
-							'user' => null,
-						]
-					);
+				\app\AcctgTAccountTypeLib::install($db);
+				\app\AcctgJournalLib::install($db);
 			},
 
 	); # config

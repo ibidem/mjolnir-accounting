@@ -40,4 +40,20 @@ class AcctgJournalLib
 		return static::find_entry(['slugid' => $slugid])['id'];
 	}
 
+	/**
+	 * ...
+	 */
+	static function install(\mjolnir\types\SQLDatabase $db)
+	{
+		\app\AcctgJournalLib::push
+			(
+				[
+					'title' => 'General Ledger',
+					'slugid' => 'system-ledger',
+					'protected' => true,
+					'user' => null,
+				]
+			);
+	}
+
 } # class

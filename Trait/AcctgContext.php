@@ -56,13 +56,12 @@ trait Trait_AcctgContext
 	 */
 	function acctgtypes
 		(
-			$page = null, $limit = null, $offset = 0,
-			array $order = null,
+			$page = null, $limit = null, $offset = 0, $depth = null,
 			array $constraints = null
 		)
 	{
 		return \app\AcctgTAccountTypeLib::entries
-			($page, $limit, $offset, $order, $constraints);
+			($page, $limit, $offset, $depth = null, $constraints);
 	}
 
 	/**
@@ -359,14 +358,25 @@ trait Trait_AcctgContext
 	{
 		$indenter !== null or $indenter = ' &mdash; ';
 		$accountslabel !== null or $accountslabel = \app\Lang::term('Accounts');
-		$blanklabel !== null or $blanklabel = '- '.\app\Lang::term('no parent').' -';
-		$blankkey !== null or $blankkey = '';
 
-		$options = array
-			(
-				$blankkey => $blanklabel,
-				$accountslabel => null,
-			);
+		if ($blanklabel !== false && $blankkey !== false)
+		{
+			$blanklabel !== null or $blanklabel = '- '.\app\Lang::term('no parent').' -';
+			$blankkey !== null or $blankkey = '';
+
+			$options = array
+				(
+					$blankkey => $blanklabel,
+					$accountslabel => null,
+				);
+		}
+		else # don't show blank option
+		{
+			$options = array
+				(
+					$accountslabel => null,
+				);
+		}
 
 		$taccounts = static::acctgtaccounts(null, null, 0, null, $constraints);
 

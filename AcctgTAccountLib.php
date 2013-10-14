@@ -16,6 +16,22 @@ class AcctgTAccountLib
 	// Factory interface
 
 	/**
+	 * Prevent accidental code calls.
+	 */
+	static function process(array $input)
+	{
+		throw new \app\Exception('Hardcoded inserts not allowed. Please use tree_push.');
+	}
+
+	/**
+	 * Prevent accidental code calls.
+	 */
+	static function update_process($id, array $input)
+	{
+		throw new \app\Exception('Hardcoded updates not allowed. Please use tree_update.');
+	}
+
+	/**
 	 * Ensure fields, except lft, rtg
 	 */
 	static function ensure_fields($id, &$input)
@@ -35,14 +51,6 @@ class AcctgTAccountLib
 
 		$prt = static::tree_parentkey();
 		isset($input[$prt]) or $input[$prt] = null;
-	}
-
-	/**
-	 * Prevent accidental code calls.
-	 */
-	static function process(array $input)
-	{
-		throw new \app\Exception('Hardcoded inserts not allowed. Please use tree_push.');
 	}
 
 	/**
@@ -119,14 +127,6 @@ class AcctgTAccountLib
 		{
 			return $errors;
 		}
-	}
-
-	/**
-	 * Prevent accidental code calls.
-	 */
-	static function update_process()
-	{
-		throw new \app\Exception('Hardcoded updates not allowed. Please use tree_update.');
 	}
 
 	/**
