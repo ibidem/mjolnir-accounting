@@ -97,21 +97,55 @@ trait Trait_AcctgContext
 			array $constraints = null
 		)
 	{
-		$subtreekey = 'subtaccounts';
+		$taccounts = static::acctgtaccounts($page, $limit, $offset, $depth, $constraints);
+		$types = static::acctgtypes(null, null);
+		$tree = \app\Arr::hierarchy_from(\app\Arr::tablemap($types, 'id'));
+		$refs = \app\Arr::refs_from($tree, 'id', 'subentries');
+		$acctrefs = [];
 
-		$entries = \app\AcctgTAccountLib::tree_hierarchy
-			(
-				$page, $limit, $offset, $depth,
-				$constraints,
-				$subtreekey # keys for where to store subentries
-			);
-
-		foreach ($entries as &$taccount)
+		foreach ($refs as &$taccounttype)
 		{
-			$this->recusively_embed_taccount_handlers($taccount, $subtreekey);
+			$taccounttype['entrytype'] = 'taccount-type';
 		}
 
-		return $entries;
+		$displayed_types = [];
+		foreach ($taccounts as &$taccount)
+		{
+			$taccount['entrytype'] = 'taccount';
+			$acctrefs[$taccount['id']] = &$taccount;
+
+			if ($taccount['parent'] !== null)
+			{
+				continue; # skip sub accounts
+			}
+
+			// show all referenced types
+			$type_entry = $refs[$taccount['type']];
+			while ($type_entry !== null)
+			{
+				$displayed_types[] = $type_entry['id'];
+				if ($type_entry['parent'] !== null)
+				{
+					$type_entry = $refs[$type_entry['parent']];
+				}
+				else # no parent
+				{
+					$type_entry = null;
+				}
+			}
+
+			isset($refs[$taccount['type']]['taccounts']) or $refs[$taccount['type']]['taccounts'] = [];
+			$refs[$taccount['type']]['taccounts'][$taccount['id']] = $taccount;
+		}
+
+		$displayed_types = \array_unique($displayed_types);
+
+		foreach ($taccounts as &$taccount)
+		{
+			$this->recusively_embed_taccount_handlers($taccount, 'subentries');
+		}
+
+		return $tree;
 	}
 
 	/**
@@ -277,21 +311,43 @@ trait Trait_AcctgContext
 	/**
 	 * @return array taccount types as optgroup array
 	 */
-	function acctgtypes_optgroups(array $constraints = null)
+	function acctgtypes_options_hierarchy(array $constraints = null,$indenter = null, $typeslabel = null)
 	{
-		$types = static::acctgtypes(null, null, 0, null, $constraints);
-		$hints = \app\AcctgTAccountTypeHintLib::entries(null, null);
-		$hintsmap = \app\Arr::gatherkeys($hints, 'id', 'title');
+		$indenter !== null or $indenter = ' &mdash; ';
+		$typeslabel !== null or $typeslabel = \app\Lang::term('TAccount Types:');
 
-		$groups = [];
+		$options = array
+			(
+				$typeslabel => null,
+			);
+
+		$types = static::acctgtypes(null, null, 0, null, $constraints);
+
 		foreach ($types as $type)
 		{
-			$group = $hintsmap[$type['typehint']];
-			isset($groups[$group]) or $groups[$group] = [];
-			$groups[$group][$type['id']] = $type['title'];
+			$title = \str_repeat($indenter, $type['depth'] + 1).$type['title'];
+
+			if ($type['usable'])
+			{
+				$options[$type['id']] = $title;
+			}
+			else # logical type
+			{
+				$options[$title] = null;
+			}
 		}
 
-		return $groups;
+		return $options;
+	}
+
+	/**
+	 * Used for splitting multiple option sets
+	 *
+	 * @return string options devider string
+	 */
+	protected function options_devider()
+	{
+		return \str_repeat(' -',32);
 	}
 
 	/**
@@ -308,33 +364,45 @@ trait Trait_AcctgContext
 	function acctgtaccounts_options_liefhierarchy(array $constraints = null, $indenter = null, $accountslabel = null, $blanklabel = null, $blankkey = null)
 	{
 		$indenter !== null or $indenter = ' &mdash; ';
-		$accountslabel !== null or $accountslabel = \app\Lang::term('Accounts');
-		$blanklabel !== null or $blanklabel = '- '.\app\Lang::term('select account').' -';
-		$blankkey !== null or $blankkey = '';
+		$accountslabel !== null or $accountslabel = \app\Lang::term('TAccounts:');
 
-		$options = array
-			(
-				$blankkey => $blanklabel,
-				$accountslabel => [],
-			);
-
-		$depthgroups = [ 0 => &$options[$accountslabel] ];
-
-		$taccounts = static::acctgtaccounts(null, null, 0, null, $constraints);
-
-		foreach ($taccounts as $taccount)
+		if ($blanklabel !== false && $blankkey !== false)
 		{
-			if ($taccount['rgt'] - $taccount['lft'] == 1)
-			{
-				$depthgroups[$taccount['depth']][$taccount['id']] = \str_repeat($indenter, $taccount['depth'] + 1).$taccount['title'];
-			}
-			else # rgt - lft > 1, node has children
-			{
-				$key = \str_repeat($indenter, $taccount['depth'] + 1).$taccount['title'];
-				$depthgroups[$taccount['depth']][$key] = [];
-				$depthgroups[$taccount['depth'] + 1] = &$depthgroups[$taccount['depth']][$key];
-			}
+			$blanklabel !== null or $blanklabel = '[ '.\app\Lang::term('no account').' ]';
+			$blankkey !== null or $blankkey = '';
+
+			$options = array
+				(
+					$blankkey => $blanklabel,
+					$this->options_devider() => [],
+					$accountslabel => [],
+				);
 		}
+		else # don't show blank option
+		{
+			$options = array
+				(
+					$accountslabel => null,
+				);
+		}
+
+//		$depthgroups = [ 0 => &$options[$accountslabel] ];
+//
+//		$taccounts = static::acctgtaccounts(null, null, 0, null, $constraints);
+//
+//		foreach ($taccounts as $taccount)
+//		{
+//			if ($taccount['rgt'] - $taccount['lft'] == 1)
+//			{
+//				$depthgroups[$taccount['depth']][$taccount['id']] = ' &nbsp; '.\str_repeat($indenter, $taccount['depth'] + 1).$taccount['title'];
+//			}
+//			else # rgt - lft > 1, node has children
+//			{
+//				$key = ' &nbsp; '.\str_repeat($indenter, $taccount['depth'] + 1).$taccount['title'];
+//				$depthgroups[$taccount['depth']][$key] = [];
+//				$depthgroups[$taccount['depth'] + 1] = &$depthgroups[$taccount['depth']][$key];
+//			}
+//		}
 
 		return $options;
 	}
@@ -357,16 +425,17 @@ trait Trait_AcctgContext
 	function acctgtaccounts_options_hierarchy(array $constraints = null, $indenter = null, $accountslabel = null, $blanklabel = null, $blankkey = null)
 	{
 		$indenter !== null or $indenter = ' &mdash; ';
-		$accountslabel !== null or $accountslabel = \app\Lang::term('Accounts');
+		$accountslabel !== null or $accountslabel = \app\Lang::term('TAccounts:');
 
 		if ($blanklabel !== false && $blankkey !== false)
 		{
-			$blanklabel !== null or $blanklabel = '- '.\app\Lang::term('no parent').' -';
+			$blanklabel !== null or $blanklabel = '[ '.\app\Lang::term('no account').' ]';
 			$blankkey !== null or $blankkey = '';
 
 			$options = array
 				(
 					$blankkey => $blanklabel,
+					$this->options_devider() => null,
 					$accountslabel => null,
 				);
 		}
@@ -379,11 +448,60 @@ trait Trait_AcctgContext
 		}
 
 		$taccounts = static::acctgtaccounts(null, null, 0, null, $constraints);
+		$types = static::acctgtypes(null, null);
+		$tree = \app\Arr::hierarchy_from(\app\Arr::tablemap($types, 'id'));
+		$refs = \app\Arr::refs_from($tree, 'id', 'subentries');
+
+		$displayed_types = [];
+		$type_options = [];
 
 		foreach ($taccounts as $taccount)
 		{
-			$options[$taccount['id']] = \str_repeat($indenter, $taccount['depth'] + 1).$taccount['title'];
+			// show all referenced types
+			$type_entry = $refs[$taccount['type']];
+			while ($type_entry !== null)
+			{
+				$displayed_types[] = $type_entry['id'];
+				if ($type_entry['parent'] !== null)
+				{
+					$type_entry = $refs[$type_entry['parent']];
+				}
+				else # no parent
+				{
+					$type_entry = null;
+				}
+			}
+
+			$option_title = ' &nbsp; '.\str_repeat($indenter, $refs[$taccount['type']]['depth'] + $taccount['depth'] + 2).$taccount['title'];
+			isset($type_options[$taccount['type']]) or $type_options[$taccount['type']] = [];
+			$type_options[$taccount['type']][$taccount['id']] = $option_title;
 		}
+
+		$displayed_types = \array_unique($displayed_types);
+
+		$options = \app\Arr::process_hierarchy
+			(
+				$tree,
+				function (&$result, $entry) use ($type_options, $displayed_types, $indenter)
+				{
+					if ( ! \in_array($entry['id'], $displayed_types))
+					{
+						return; # skip rendering
+					}
+
+					$option_title = ' &nbsp; '.\str_repeat($indenter, $entry['depth'] + 1).$entry['title'];
+					$result[$option_title] = null;
+					if (isset($type_options[$entry['id']]))
+					{
+						foreach ($type_options[$entry['id']] as $key => $option)
+						{
+							$result[$key] = $option;
+						}
+					}
+				},
+				null, # default subentry key
+				$options
+			);
 
 		return $options;
 	}

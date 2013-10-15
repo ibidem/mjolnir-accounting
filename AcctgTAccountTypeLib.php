@@ -41,6 +41,7 @@ class AcctgTAccountTypeLib
 	{
 		$lft = static::tree_lft();
 		$rgt = static::tree_rgt();
+		$prt = static::tree_parentkey();
 
 		! empty($depthkey) or $depthkey = 'depth';
 
@@ -60,21 +61,29 @@ class AcctgTAccountTypeLib
 			(
 				__METHOD__,
 				"
-					#!info rgt -> $rgt, lft -> $lft
+					#!info rgt -> $rgt, lft -> $lft, prt -> $prt
 
 					SELECT entry.*,
 					       (
-								SELECT count(*)
-								  FROM `".\app\AcctgTAccountLib::table()."` taccount
+					           SELECT mirror.id
+					             FROM :table mirror
+					            WHERE mirror.lft < entry.lft
+				                  AND mirror.rgt > entry.rgt
+				                ORDER BY mirror.rgt - entry.rgt ASC
+				                LIMIT 1
+							) AS $prt,
+					        (
+							    SELECT count(*)
+					            FROM `".\app\AcctgTAccountLib::table()."` taccount
 
-								 WHERE taccount.type
-								    IN (
-										SELECT enum.id
-										  FROM `".\app\AcctgTAccountTypeLib::table()."` enum
-										 WHERE enum.lft >= entry.lft
-										   AND enum.rgt <= entry.rgt
-									)
-						   ) taccountcount
+                                WHERE taccount.type
+					              IN (
+                                        SELECT enum.id
+								          FROM `".\app\AcctgTAccountTypeLib::table()."` enum
+					                     WHERE enum.lft >= entry.lft
+					                       AND enum.rgt <= entry.rgt
+								  )
+						    ) taccountcount
 
 					FROM
 					(

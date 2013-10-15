@@ -3,7 +3,7 @@
 		'assets' => array
 			(
 				'slugid' => 'assets',
-				'title' => 'Assets',
+				'title' => 'Asset Accounts',
 				'parent' => null,
 				'sign' => +1,
 				'usable' => false,
@@ -57,7 +57,7 @@
 		'equity' => array
 			(
 				'slugid' => 'equity',
-				'title' => 'Equity',
+				'title' => 'Equity Accounts',
 				'parent' => null,
 				'sign' => +1,
 				'usable' => false,
