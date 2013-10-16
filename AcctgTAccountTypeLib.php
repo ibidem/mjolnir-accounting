@@ -178,4 +178,30 @@ class AcctgTAccountTypeLib
 		}
 	}
 
+	/**
+	 * @return array
+	 */
+	static function inferred_types($type)
+	{
+		$tabledata = static::statement
+			(
+				__METHOD__,
+				'
+					SELECT entry.id
+					 FROM :table entry
+
+					 JOIN `'.static::table().'` ref
+					   ON ref.id = :target
+
+					 WHERE entry.lft >= ref.lft
+					   AND entry.rgt <= ref.rgt
+				'
+			)
+			->num(':target', $type)
+			->run()
+			->fetch_all();
+
+		return \app\Arr::gather($tabledata, 'id');
+	}
+
 } # class

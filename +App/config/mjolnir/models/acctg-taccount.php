@@ -8,6 +8,7 @@
 		'fields' => array
 			(
 				'id' => 'number',
+				'group' => 'number',
 				'type' => 'number',
 				'title' => 'string',
 			// account value sign; used in formulas; contra accounts have -1

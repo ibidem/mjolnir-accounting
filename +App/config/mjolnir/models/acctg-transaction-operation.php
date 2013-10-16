@@ -23,7 +23,7 @@
 						'driver' => 'reference',
 						'collection' => 'AcctgTransactionCollection'
 					),
-			// the amout moved by the operation
+			// the amount moved by the operation
 				'amount' => [ 'driver' => 'currency' ],
 			// a note on the operation
 				'note' => 'string',

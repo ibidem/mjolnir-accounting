@@ -24,13 +24,14 @@ class AcctgTAccountModel extends \app\MarionetteModel
 		isset($input['sign']) or $input['sign'] = +1;
 		isset($input['lft']) or $input['lft'] = null;
 		isset($input['rgt']) or $input['rgt'] = null;
+		isset($input['group']) or $input['group'] = null;
 
 		if (\is_string($input['sign']))
 		{
 			$input['sign'] = (int) $input['sign'];
 		}
 
-		return $input;
+		return parent::parse($input);
 	}
 
 	/**

@@ -14,4 +14,13 @@ class AcctgJournalModel extends \app\MarionetteModel
 	 */
 	static $configfile = 'mjolnir/models/acctg-journal';
 
+	/**
+	 * @return array parsed input
+	 */
+	function parse(array $input)
+	{
+		isset($input['group']) or $input['group'] = null;
+		return parent::parse($input);
+	}
+
 } # class

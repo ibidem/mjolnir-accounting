@@ -65,4 +65,23 @@ class AcctgSettingsLib
 		static::clear_cache();
 	}
 
+	// ------------------------------------------------------------------------
+	// etc
+
+	/**
+	 * @return string
+	 */
+	static function taccountlock_issuer()
+	{
+		return 'mjolnir:acctg-settings';
+	}
+
+	/**
+	 * @return string
+	 */
+	static function taccountlock_cause()
+	{
+		return 'accounting system settings';
+	}
+
 } # class

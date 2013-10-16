@@ -300,9 +300,16 @@ trait Trait_AcctgContext
 	/**
 	 * @return array
 	 */
-	function acctgtransactionlog()
+	function acctgtransactionlog($constraints = null)
 	{
-		return \app\AcctgTransactionLib::entries(null, null, 0, ['timestamp' => 'desc']);
+		return \app\AcctgTransactionLib::entries
+			(
+				null, null, 0,
+				[
+					'entry.timestamp' => 'desc'
+				],
+				$constraints
+			);
 	}
 
 	// ------------------------------------------------------------------------
@@ -311,7 +318,7 @@ trait Trait_AcctgContext
 	/**
 	 * @return array taccount types as optgroup array
 	 */
-	function acctgtypes_options_hierarchy(array $constraints = null,$indenter = null, $typeslabel = null)
+	function acctgtypes_options_hierarchy(array $constraints = null, $indenter = null, $typeslabel = null)
 	{
 		$indenter !== null or $indenter = ' &mdash; ';
 		$typeslabel !== null or $typeslabel = \app\Lang::term('TAccount Types:');
@@ -357,72 +364,11 @@ trait Trait_AcctgContext
 	 * eg.
 	 *
 	 *	$form->select('Example Select', 'example)
-	 *		->options_liefhierarchy($context->acctgtaccounts_options_liefhierarchy())
+	 *		->options_logical($context->acctgtaccounts_options_liefhierarchy())
 	 *
 	 * @return array taccounts as liefhierarchy array
 	 */
-	function acctgtaccounts_options_liefhierarchy(array $constraints = null, $indenter = null, $accountslabel = null, $blanklabel = null, $blankkey = null)
-	{
-		$indenter !== null or $indenter = ' &mdash; ';
-		$accountslabel !== null or $accountslabel = \app\Lang::term('TAccounts:');
-
-		if ($blanklabel !== false && $blankkey !== false)
-		{
-			$blanklabel !== null or $blanklabel = '[ '.\app\Lang::term('no account').' ]';
-			$blankkey !== null or $blankkey = '';
-
-			$options = array
-				(
-					$blankkey => $blanklabel,
-					$this->options_devider() => [],
-					$accountslabel => [],
-				);
-		}
-		else # don't show blank option
-		{
-			$options = array
-				(
-					$accountslabel => null,
-				);
-		}
-
-//		$depthgroups = [ 0 => &$options[$accountslabel] ];
-//
-//		$taccounts = static::acctgtaccounts(null, null, 0, null, $constraints);
-//
-//		foreach ($taccounts as $taccount)
-//		{
-//			if ($taccount['rgt'] - $taccount['lft'] == 1)
-//			{
-//				$depthgroups[$taccount['depth']][$taccount['id']] = ' &nbsp; '.\str_repeat($indenter, $taccount['depth'] + 1).$taccount['title'];
-//			}
-//			else # rgt - lft > 1, node has children
-//			{
-//				$key = ' &nbsp; '.\str_repeat($indenter, $taccount['depth'] + 1).$taccount['title'];
-//				$depthgroups[$taccount['depth']][$key] = [];
-//				$depthgroups[$taccount['depth'] + 1] = &$depthgroups[$taccount['depth']][$key];
-//			}
-//		}
-
-		return $options;
-	}
-
-	/**
-	 * This method is designed to be used in conjuction with
-	 * HTMLFormField_Select objects.
-	 *
-	 * Unlike the liefhierarchy equivalent using this method will make all
-	 * accounts selectable. The method is used in cases such as assigning a
-	 * parent taccount on creation.
-	 *
-	 * eg.
-	 *
-	 *	$form->select('Example Select', 'example)
-	 *		->options_logical($context->acctgtaccounts_options())
-	 *
-	 * @return array taccounts as hierarchy array
-	 */
-	function acctgtaccounts_options_hierarchy(array $constraints = null, $indenter = null, $accountslabel = null, $blanklabel = null, $blankkey = null)
+	function acctgtaccounts_options_liefs(array $types = null, array $constraints = null, $indenter = null, $accountslabel = null, $blanklabel = null, $blankkey = null)
 	{
 		$indenter !== null or $indenter = ' &mdash; ';
 		$accountslabel !== null or $accountslabel = \app\Lang::term('TAccounts:');
@@ -445,6 +391,116 @@ trait Trait_AcctgContext
 				(
 					$accountslabel => null,
 				);
+		}
+
+		if ($types !== null)
+		{
+			$constraints['entry.type'] = [ 'IN' => $this->acctg_parsetypeconstraints($types) ];
+		}
+
+		$taccounts = static::acctgtaccounts(null, null, 0, null, $constraints);
+		$types = static::acctgtypes(null, null);
+		$tree = \app\Arr::hierarchy_from(\app\Arr::tablemap($types, 'id'));
+		$refs = \app\Arr::refs_from($tree, 'id', 'subentries');
+
+		$displayed_types = [];
+		$type_options = [];
+
+		foreach ($taccounts as $taccount)
+		{
+			// show all referenced types
+			$type_entry = $refs[$taccount['type']];
+
+			while ($type_entry !== null)
+			{
+				$displayed_types[] = $type_entry['id'];
+				if ($type_entry['parent'] !== null)
+				{
+					$type_entry = $refs[$type_entry['parent']];
+				}
+				else # no parent
+				{
+					$type_entry = null;
+				}
+			}
+
+			isset($type_options[$taccount['type']]) or $type_options[$taccount['type']] = [];
+			$option_title = ' &nbsp; '.\str_repeat($indenter, $refs[$taccount['type']]['depth'] + $taccount['depth'] + 2).$taccount['title'];
+			$type_options[$taccount['type']][$taccount['id']] = $option_title;
+		}
+
+		$displayed_types = \array_unique($displayed_types);
+
+		$options = \app\Arr::process_hierarchy
+			(
+				$tree,
+				function (&$result, $entry) use ($type_options, $displayed_types, $indenter)
+				{
+					if ( ! \in_array($entry['id'], $displayed_types))
+					{
+						return; # skip rendering
+					}
+
+					$option_title = ' &nbsp; '.\str_repeat($indenter, $entry['depth'] + 1).$entry['title'];
+					$result[$option_title] = null;
+					if (isset($type_options[$entry['id']]))
+					{
+						foreach ($type_options[$entry['id']] as $key => $option)
+						{
+							$result[$key] = $option;
+						}
+					}
+				},
+				null, # default subentry key
+				$options
+			);
+
+		return $options;
+	}
+
+	/**
+	 * This method is designed to be used in conjuction with
+	 * HTMLFormField_Select objects.
+	 *
+	 * Unlike the liefhierarchy equivalent using this method will make all
+	 * accounts selectable. The method is used in cases such as assigning a
+	 * parent taccount on creation.
+	 *
+	 * eg.
+	 *
+	 *	$form->select('Example Select', 'example)
+	 *		->options_logical($context->acctgtaccounts_options())
+	 *
+	 * @return array taccounts as hierarchy array
+	 */
+	function acctgtaccounts_options_hierarchy(array $types = null, array $constraints = null, $indenter = null, $accountslabel = null, $blanklabel = null, $blankkey = null)
+	{
+		$indenter !== null or $indenter = ' &mdash; ';
+		$accountslabel !== null or $accountslabel = \app\Lang::term('TAccounts:');
+
+		if ($blanklabel !== false && $blankkey !== false)
+		{
+			$blanklabel !== null or $blanklabel = '[ '.\app\Lang::term('no account').' ]';
+			$blankkey !== null or $blankkey = '';
+
+			$options = array
+				(
+					$blankkey => $blanklabel,
+					$this->options_devider() => null,
+					$accountslabel => null,
+				);
+		}
+		else # don't show blank option
+		{
+			$options = array
+				(
+					$accountslabel => null,
+				);
+		}
+
+		if ($types !== null)
+		{
+			$constraints['entry.type'] = [ 'IN' => $this->acctg_parsetypeconstraints($types) ];
 		}
 
 		$taccounts = static::acctgtaccounts(null, null, 0, null, $constraints);
@@ -729,6 +785,27 @@ trait Trait_AcctgContext
 				$attributes,
 				$user_role
 			);
+	}
+
+	// ------------------------------------------------------------------------
+	// Helpers
+
+	/**
+	 * @return array complete list of allowed types
+	 */
+	protected function acctg_parsetypeconstraints(array $mastertypes)
+	{
+		$inferred_types = [];
+		foreach ($mastertypes as $type)
+		{
+			$inferred_types = \app\Arr::merge
+				(
+					$inferred_types,
+					\app\AcctgTAccountTypeLib::inferred_types($type)
+				);
+		}
+
+		return $inferred_types;
 	}
 
 } # trait
