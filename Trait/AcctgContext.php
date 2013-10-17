@@ -48,6 +48,17 @@ trait Trait_AcctgContext
 		return \app\CFS::config('mjolnir/acctg/routes');
 	}
 
+	// Reports
+	// ------------------------------------------------------------------------
+
+	/**
+	 * @return \mjolnir\accounting\AcctgReportInterface
+	 */
+	function acctgreport_balancesheet($options, $group = null)
+	{
+		return \app\AcctgReport_BalanceSheet::instance($options, $group);
+	}
+
 	// ------------------------------------------------------------------------
 	// Acctg Collections
 
