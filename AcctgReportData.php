@@ -11,15 +11,32 @@ class AcctgReportData extends \app\AcctgReportEntry implements AcctgReportDataIn
 {
 	use \app\Trait_AcctgReportData;
 
-	/** @var array of \mjolnir\accounting\AcctgReportEntryInterface */
-	protected $rows = null;
-
 	/**
-	 * Add sub row.
+	 * @return string
 	 */
-	static function addentry(AcctgReportDataInterface $row)
+	function render($indent = null)
 	{
-		$this->rows[] = $row;
+		$render = '<tr>';
+
+		$render .= '<td>'.$this->indent($indent, $this->get('title', null)).'</td>';
+
+		foreach ($this->datahandlers() as $key => $func)
+		{
+			$render .= $func($key, $this);
+		}
+
+		$render .= '</tr>';
+
+		foreach ($this->entres() as $entry)
+		{
+			$render .= $entry->render($indent + 1);
+		}
+
+		$totals = \app\AcctgReportData::instance($this->totals() + ['title' => 'Total '.$this->title()]);
+		$totals->calculators_array($this->calculators());
+		$render .= $totals->render($indent);
+
+		return $render;
 	}
 
 } # class

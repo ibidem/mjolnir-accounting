@@ -12,6 +12,9 @@ use \mjolnir\types\Meta as Meta;
  */
 interface AcctgReportEntryInterface extends Renderable, Meta
 {
-
+	/**
+	 * @return string
+	 */
+	function render($indent = null);
 
 } # interface

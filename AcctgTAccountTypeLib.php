@@ -204,4 +204,38 @@ class AcctgTAccountTypeLib
 		return \app\Arr::gather($tabledata, 'id');
 	}
 
+	/**
+	 * @return array
+	 */
+	static function inferred_types_by_name($type_slugid)
+	{
+		$entry = static::find_entry(['slugid' => $type_slugid]);
+
+		if ($entry === null)
+		{
+			throw new \app\Exception('Type of slugid ['.$type_slugid.'].');
+		}
+		else # $entry !== null
+		{
+			return static::inferred_types($entry['id']);
+		}
+	}
+
+	/**
+	 * @return id type id
+	 */
+	static function typebyname($typename)
+	{
+		$entry = \app\AcctgTAccountTypeLib::find_entry(['slugid' => $typename]);
+
+		if ($entry === null)
+		{
+			throw new \app\Exception('The system does not know of any type called ['.$typename.'].');
+		}
+		else # entry !== null
+		{
+			return $entry['id'];
+		}
+	}
+
 } # class

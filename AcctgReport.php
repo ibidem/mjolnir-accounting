@@ -26,6 +26,8 @@ abstract class AcctgReport extends \app\Instantiatable implements AcctgReportInt
 			}
 		}
 
+		$i->set('group', $group);
+
 		return $i;
 	}
 

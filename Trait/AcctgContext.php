@@ -119,34 +119,41 @@ trait Trait_AcctgContext
 			$taccounttype['entrytype'] = 'taccount-type';
 		}
 
+		foreach ($taccounts as &$taccount)
+		{
+			$taccount['subentries'] = [];
+			$acctrefs[$taccount['id']] = &$taccount;
+		}
+
 		$displayed_types = [];
 		foreach ($taccounts as &$taccount)
 		{
 			$taccount['entrytype'] = 'taccount';
-			$acctrefs[$taccount['id']] = &$taccount;
 
-			if ($taccount['parent'] !== null)
+			if ($taccount['parent'] === null)
 			{
-				continue; # skip sub accounts
-			}
+				// show all referenced types
+				$type_entry = $refs[$taccount['type']];
+				while ($type_entry !== null)
+				{
+					$displayed_types[] = $type_entry['id'];
+					if ($type_entry['parent'] !== null)
+					{
+						$type_entry = $refs[$type_entry['parent']];
+					}
+					else # no parent
+					{
+						$type_entry = null;
+					}
+				}
 
-			// show all referenced types
-			$type_entry = $refs[$taccount['type']];
-			while ($type_entry !== null)
+				isset($refs[$taccount['type']]['taccounts']) or $refs[$taccount['type']]['taccounts'] = [];
+				$refs[$taccount['type']]['taccounts'][$taccount['id']] = &$taccount;
+			}
+			else # parent !== null
 			{
-				$displayed_types[] = $type_entry['id'];
-				if ($type_entry['parent'] !== null)
-				{
-					$type_entry = $refs[$type_entry['parent']];
-				}
-				else # no parent
-				{
-					$type_entry = null;
-				}
+				$acctrefs[$taccount['parent']]['subentries'][] = $taccount;
 			}
-
-			isset($refs[$taccount['type']]['taccounts']) or $refs[$taccount['type']]['taccounts'] = [];
-			$refs[$taccount['type']]['taccounts'][$taccount['id']] = $taccount;
 		}
 
 		$displayed_types = \array_unique($displayed_types);

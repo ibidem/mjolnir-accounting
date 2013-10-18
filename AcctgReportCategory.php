@@ -7,31 +7,49 @@
  * @copyright  (c) 2013, Ibidem Team
  * @license    https://github.com/ibidem/ibidem/blob/master/LICENSE.md
  */
-class AcctgReportCategory
-extends \app\AcctgReportEntry
+class AcctgReportCategory extends \app\AcctgReportEntry
 {
 	/**
-	 * Add subrow
+	 * @return static
 	 */
-	static function addnestedcategory(AcctgReportCategoryInterface $row)
+	static function instance($title = null)
 	{
-		$this->rows[] = $row;
+		$i = parent::instance();
+		$i->set('title', $title);
+		return $i;
 	}
 
 	/**
-	 * @return AcctgReportRowInterface
+	 * @return AcctgReportCategoryInterface
 	 */
-	function totals()
+	function newcategory($title)
 	{
-		throw new \app\Exception_NotImplemented();
+		$cat = \app\AcctgReportCategory::instance($title);
+		$cat->datahandlers_array($this->datahandlers);
+		$this->addentry($cat);
+		return $cat;
 	}
 
 	/**
-	 * Add subrow
+	 * @return int
 	 */
-	static function addentry(AcctgReportEntryInterface $row)
+	protected function columncount()
 	{
-		$this->rows[] = $row;
+		return \count($this->datahandlers()) + 1;
+	}
+
+	/**
+	 * @return string
+	 */
+	function render($indent = null)
+	{
+		$render = '<tr><td colspan="'.$this->columncount().'">'.$this->indent($indent, $this->get('title', null)).'</td></tr>';
+		foreach ($this->entries() as $entry)
+		{
+			$render .= $entry->render($indent + 1);
+		}
+
+		return $render;
 	}
 
 } # class

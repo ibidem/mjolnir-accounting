@@ -13,6 +13,12 @@ trait Trait_AcctgReport
 	use \app\Trait_Renderable;
 	use \app\Trait_Meta;
 
+	/** @var \mjolnir\accounting\AcctgReportEntryInterface */
+	protected $reportview = null;
+
+	/** @var array */
+	protected $headers = null;
+
 	/**
 	 * eg. a BalanceSheet report might return "Balance Sheet"
 	 *
@@ -56,6 +62,28 @@ trait Trait_AcctgReport
 	protected function default_rules()
 	{
 		return \app\Validator::instance($this->metadata());
+	}
+
+	/**
+	 * @return string
+	 */
+	function render_header()
+	{
+		return '';
+	}
+
+	/**
+	 * @return string report
+	 */
+	function render()
+	{
+		return
+		'
+			<table class="acctg-report">
+				<thead>'.$this->render_header().'</thead>
+				<tbody>'.$this->reportview->render().'</tbody>
+			</table>
+		';
 	}
 
 } # trait

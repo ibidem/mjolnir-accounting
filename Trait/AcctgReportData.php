@@ -9,6 +9,41 @@
  */
 trait Trait_AcctgReportData
 {
-	use \app\Trait_AcctgReportEntry;
+	/**
+	 * @return static
+	 */
+	static function instance(array $data = null)
+	{
+		$i = parent::instance();
+
+		if ($data !== null)
+		{
+			$i->set('title', $data['title']);
+			$i->set('data', $data);
+		}
+		else # data === null
+		{
+			throw new \app\Exception('Data required.');
+		}
+
+		return $i;
+	}
+
+	/**
+	 * @return mixed
+	 */
+	function attr($key, $default = null)
+	{
+		$data = $this->get('data', []);
+		if (isset($data[$key]))
+		{
+			return $data[$key];
+		}
+		else # key not set
+		{
+			return $default;
+		}
+	}
+
 
 } # trait
