@@ -131,8 +131,6 @@ class AcctgReport_BalanceSheet extends \app\AcctgReport
 				$acctentry = $root->newdataentry($taccount);
 				$this->integrate_taccounts($acctentry, $taccount['subentries']);
 			}
-
-			
 		}
 	}
 
