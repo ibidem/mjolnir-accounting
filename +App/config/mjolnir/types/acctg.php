@@ -21,4 +21,25 @@
 				'manual' => 'Manual',
 			),
 
+		'report' => array
+			(
+				'intervals' => array
+					(
+						'custom' => 'Custom',
+						'all' => 'All',
+						'today' => 'Today',
+						'current-month' => 'Current Month',
+						'fiscal-quarter' => 'Fiscal Quarter',
+						'fiscal-year' => 'Fiscal Year',
+						'last-fiscal-year' => 'Last Fiscal Year',
+					),
+				'breakdowns' => array
+					(
+						'totals-only' => 'Totals Only',
+						'month' => 'Monthly',
+						'quarter' => 'Quarterly',
+						'year' => 'Yearly',
+					),
+			),
+
 	); # config

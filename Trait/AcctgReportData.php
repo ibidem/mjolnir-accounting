@@ -45,5 +45,34 @@ trait Trait_AcctgReportData
 		}
 	}
 
+	// ------------------------------------------------------------------------
+	// Calculators
+
+	/**
+	 * @return mixed
+	 */
+	function calculate($key)
+	{
+		return $this->calculators[$key]($key, $this);
+	}
+
+	/**
+	 * @return array
+	 */
+	function totals()
+	{
+		$totals = [];
+		$calculators = \array_keys($this->calculators());
+
+		if ($calculators !== null)
+		{
+			foreach ($calculators as $key)
+			{
+				$totals[$key] = $this->calculate($key);
+			}
+		}
+
+		return $totals;
+	}
 
 } # trait

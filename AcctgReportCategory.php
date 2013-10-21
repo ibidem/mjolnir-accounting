@@ -25,17 +25,10 @@ class AcctgReportCategory extends \app\AcctgReportEntry
 	function newcategory($title)
 	{
 		$cat = \app\AcctgReportCategory::instance($title);
-		$cat->datahandlers_array($this->datahandlers);
+		$cat->datahandlers_array($this->datahandlers());
+		$cat->calculators_array($this->calculators());
 		$this->addentry($cat);
 		return $cat;
-	}
-
-	/**
-	 * @return int
-	 */
-	protected function columncount()
-	{
-		return \count($this->datahandlers()) + 1;
 	}
 
 	/**
@@ -43,10 +36,27 @@ class AcctgReportCategory extends \app\AcctgReportEntry
 	 */
 	function render($indent = null)
 	{
-		$render = '<tr><td colspan="'.$this->columncount().'">'.$this->indent($indent, $this->get('title', null)).'</td></tr>';
+		$render =
+			'
+				<tr>
+					<td colspan="'.$this->columncount().'" class="'.$this->displayclass().'">
+						'.$this->indent($indent, $this->get('title', null)).'
+					</td>
+				</tr>
+			';
+
 		foreach ($this->entries() as $entry)
 		{
 			$render .= $entry->render($indent + 1);
+		}
+
+		if ($this->show_totals)
+		{
+			$totals = \app\AcctgReportData::instance($this->totals() + ['title' => $this->totalstitle($this->title())]);
+			$totals->displayclass_is('acctg-report--totalsrow');
+			$totals->calculators_array($this->calculators());
+			$totals->datahandlers_array($this->datahandlers());
+			$render .= $totals->render($indent);
 		}
 
 		return $render;

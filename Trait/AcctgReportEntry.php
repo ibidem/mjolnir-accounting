@@ -12,6 +12,84 @@ trait Trait_AcctgReportEntry
 	use \app\Trait_Renderable;
 	use \app\Trait_Meta;
 
+	/**
+	 * @return string
+	 */
+	function title()
+	{
+		return $this->get('title', null);
+	}
+
+	/** @var string|callback */
+	protected $totalstitle = null;
+
+	/**
+	 * @return static $this
+	 */
+	function totalstitle_is($title)
+	{
+		$this->totalstitle = $title;
+		return $this;
+	}
+
+	/**
+	 * @return static $this
+	 */
+	function totalstitle($title)
+	{
+		if (\is_callable($this->totalstitle))
+		{
+			$callback = $this->totalstitle;
+			return $callback($title);
+		}
+		else if ($this->totalstitle !== null)
+		{
+			return $this->totalstitle;
+		}
+		else # totalstitle === null
+		{
+			return '<b>Total</b> '.$title;
+		}
+	}
+
+	/**
+	 * @return int
+	 */
+	protected function columncount()
+	{
+		return \count($this->datahandlers()) + 1;
+	}
+
+	// ------------------------------------------------------------------------
+	// Display Class
+
+	/** @var string entry display class */
+	protected $displayclass = null;
+
+	/**
+	 * @return static $this
+	 */
+	function displayclass_is($class)
+	{
+		$this->displayclass = $class;
+		return $this;
+	}
+
+	/**
+	 * @return string
+	 */
+	function displayclass()
+	{
+		if ($this->displayclass === null)
+		{
+			return 'acctg-report--row';
+		}
+		else # special class
+		{
+			return $this->displayclass;
+		}
+	}
+
 	// ------------------------------------------------------------------------
 	// Nested Entries
 
@@ -39,6 +117,7 @@ trait Trait_AcctgReportEntry
 	{
 		$dataentry = \app\AcctgReportData::instance($data);
 		$dataentry->datahandlers_array($this->datahandlers());
+		$dataentry->calculators_array($this->calculators());
 		$this->addentry($dataentry);
 		return $dataentry;
 	}
@@ -121,7 +200,7 @@ trait Trait_AcctgReportEntry
 	/**
 	 * @return array
 	 */
-	function &datahandlers()
+	function &calculators()
 	{
 		return $this->calculators;
 	}
@@ -151,7 +230,17 @@ trait Trait_AcctgReportEntry
 				case 'currency':
 					$this->calculators[$key] = function ($key, AcctgReportDataInterface $dataentry)
 						{
-							// @todo
+							// convert to cents
+							$total = \intval($dataentry->attr($key) * 100);
+
+							foreach ($dataentry->entries() as $subdataentry)
+							{
+								// perform add in cents
+								$total += \intval($subdataentry->calculate($key) * 100);
+							}
+
+							// convert from cents back to expanded version
+							return $total / 100;
 						};
 					break;
 
@@ -161,13 +250,56 @@ trait Trait_AcctgReportEntry
 		}
 	}
 
+	/**
+	 * @return array
+	 */
+	function totals()
+	{
+		$totals = [];
+
+		foreach (\array_keys($this->calculators()) as $key)
+		{
+			$totals[$key] = 0;
+		}
+
+		foreach ($this->entries() as $entry)
+		{
+			$entrytotals = $entry->totals();
+			// perform total in cents
+			foreach ($entrytotals as $key => $value)
+			{
+				$totals[$key] += \intval($value * 100);
+			}
+		}
+
+		// convert back from cents value
+		foreach ($totals as $key => $value)
+		{
+			$totals[$key] = $value / 100;
+		}
+
+		return $totals;
+	}
+
+	/** @var boolean show totals for category */
+	protected $show_totals = true;
+
+	/**
+	 * @return static $this
+	 */
+	function nototals()
+	{
+		$this->show_totals = false;
+		return $this;
+	}
+
 	// ------------------------------------------------------------------------
 	// Helpers
 
 	/**
 	 * @return string
 	 */
-	function indent($indent, $text)
+	protected function indent($indent, $text)
 	{
 		$indent !== null or $indent = 0;
 		return \str_repeat(' &nbsp; &nbsp; ', $indent).$text;

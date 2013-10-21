@@ -16,27 +16,52 @@ class AcctgReportData extends \app\AcctgReportEntry implements AcctgReportDataIn
 	 */
 	function render($indent = null)
 	{
-		$render = '<tr>';
+		$rowdata = '<td>'.$this->indent($indent, $this->get('title', null)).'</td>';
 
-		$render .= '<td>'.$this->indent($indent, $this->get('title', null)).'</td>';
-
-		foreach ($this->datahandlers() as $key => $func)
+		$datahandlers = $this->datahandlers();
+		if ($datahandlers !== null)
 		{
-			$render .= $func($key, $this);
+			foreach ($datahandlers as $key => $func)
+			{
+				$rowdata .= $func($key, $this);
+			}
 		}
 
-		$render .= '</tr>';
+		$entries = $this->entries();
 
-		foreach ($this->entres() as $entry)
+		$subrows = '';
+		if (\count($entries) > 0)
 		{
-			$render .= $entry->render($indent + 1);
+			$this->displayclass_is('acctg-report--multirow');
+
+			foreach ($entries as $entry)
+			{
+				$subrows .= $entry->render($indent + 1);
+			}
+
+			$totals = \app\AcctgReportData::instance($this->totals() + ['title' => $this->totalstitle($this->title())]);
+			$totals->displayclass_is('acctg-report--totalsrow');
+			$totals->calculators_array($this->calculators());
+			$totals->datahandlers_array($this->datahandlers());
+			$subrows .= $totals->render($indent);
+
+			return
+				'
+					<tr class="'.$this->displayclass().'">
+						<td colspan="'.$this->columncount().'">'.$this->indent($indent, $this->get('title', null)).'</td>
+					</tr>
+					'.$subrows.'
+				';
 		}
-
-		$totals = \app\AcctgReportData::instance($this->totals() + ['title' => 'Total '.$this->title()]);
-		$totals->calculators_array($this->calculators());
-		$render .= $totals->render($indent);
-
-		return $render;
+		else # no subrows
+		{
+			return
+				'
+					<tr class="'.$this->displayclass().'">
+						'.$rowdata.'
+					</tr>
+				';
+		}
 	}
 
 } # class

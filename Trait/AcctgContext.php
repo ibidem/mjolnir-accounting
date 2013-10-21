@@ -334,6 +334,22 @@ trait Trait_AcctgContext
 	// Form Helpers
 
 	/**
+	 * @return array supporter report interval
+	 */
+	function acctg_supporter_reportintervals()
+	{
+		return \app\CFS::config('mjolnir/types/acctg')['report']['intervals'];
+	}
+
+	/**
+	 * @return array supporter report breakdowns
+	 */
+	function acctg_supporter_reportbreakdowns()
+	{
+		return \app\CFS::config('mjolnir/types/acctg')['report']['breakdowns'];
+	}
+
+	/**
 	 * @return array taccount types as optgroup array
 	 */
 	function acctgtypes_options_hierarchy(array $constraints = null, $indenter = null, $typeslabel = null)
