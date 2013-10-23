@@ -60,6 +60,7 @@
 				</tbody>
 			<? endif; ?>
 			<? foreach ($months as $month => $days): ?>
+				<? $month = \intval($month) ?>
 				<? foreach ($days as $day => $transactions): ?>
 					<? foreach ($transactions as $transaction): ?>
 						<tbody class="acctg-journal-table--transaction-tbody">

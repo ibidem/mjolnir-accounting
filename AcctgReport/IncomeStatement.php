@@ -91,10 +91,10 @@ class AcctgReport_IncomeStatement extends \app\AcctgReport
 				->run()
 				->fetch_all();
 
-			foreach ($sql_totals as $entry)
+			foreach ($sql_totals as &$entry)
 			{
 				$entry['type'] = \app\AcctgTAccountTypeLib::typefortaccount($entry['taccount']);
-				$entry['total'] = $entry['total'] * \app\AcctgTAccountTypeLib::sign($entry['type']) * \app\AcctgTAccountLib::sign($entry['taccount']);
+				$entry['total'] = \intval(\floatval($entry['total']) * 100) * \app\AcctgTAccountTypeLib::sign($entry['type']) * \app\AcctgTAccountLib::sign($entry['taccount']) / 100;
 			}
 
 			$totals[$key] = \app\Arr::gatherkeys($sql_totals, 'taccount', 'total');

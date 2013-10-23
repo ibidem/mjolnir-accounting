@@ -203,7 +203,7 @@ class AcctgReport_BalanceSheet extends \app\AcctgReport
 		// Resolve Capital
 		// ---------------
 
-		$capitalview = $liabilities_and_equity->newdataentry(['title' => 'Capital']);
+
 
 		#
 		# Capital is calculated as total from Statement of Owner's Equity,
@@ -220,38 +220,38 @@ class AcctgReport_BalanceSheet extends \app\AcctgReport
 		$capitalstock_type = \app\AcctgTAccountTypeLib::find_entry(['slugid' => 'capital-stock']);
 		$retained_earnings_type = \app\AcctgTAccountTypeLib::find_entry(['slugid' => 'retained-earnings']);
 
-		// retrieve all relevant accounts
+		// retrieve all relevant capital accounts for start of year calculations
 		$sql_totals = \app\SQL::prepare
 			(
 				__METHOD__.':investments-captalstock-retained-earnings-accounts',
 				'
-					SELECT op.taccount,
-					       tacct_type.id type,
-						   SUM(op.amount_value * op.type) total
+					SELECT taccount.id taccount,
+					       type.id type,
+					       SUM(op.amount_value * op.type) total
 
-					  FROM `'.\app\AcctgTransactionOperationLib::table().'` op
+				      FROM `acctg__taccounts` taccount
 
-					  JOIN `'.\app\AcctgTransactionLib::table().'` tr
-						ON tr.id = op.transaction
+				      JOIN `acctg__transaction_operations` op
+					    ON taccount.id = op.taccount
 
-					  JOIN `'.\app\AcctgTAccountLib::table().'` taccount
-						ON taccount.id = op.taccount
+				      JOIN `acctg__transactions` tr
+					    ON op.transaction = tr.id
 
-					  JOIN `'.\app\AcctgTAccountTypeLib::table().'` tacct_type
-						ON tacct_type.id = taccount.type
+				      JOIN `acctg__taccount_types` type
+					    ON type.id = taccount.type
 
-					 WHERE tr.group <=> :group
-					   AND tr.date <= :start_of_year
+				     WHERE tr.date < :start_of_year
+                       AND tr.group <=> :group
 					   AND
 					   (
-							(tacct_type.lft >= :capital_stock_lft AND tacct_type.rgt <= :capital_stock_rgt)
+							(type.lft >= :capital_stock_lft AND type.rgt <= :capital_stock_rgt)
 							OR
-							(tacct_type.lft >= :investments_lft AND tacct_type.rgt <= :investments_rgt)
+							(type.lft >= :investments_lft AND type.rgt <= :investments_rgt)
 							OR
-							(tacct_type.lft >= :retained_earnings_lft AND tacct_type.rgt <= :retained_earnings_rgt)
+							(type.lft >= :retained_earnings_lft AND type.rgt <= :retained_earnings_rgt)
 					   )
 
-					 GROUP BY op.taccount
+					 GROUP BY taccount.id
 				'
 			)
 			->num(':capital_stock_lft', $capitalstock_type['lft'])
@@ -266,14 +266,201 @@ class AcctgReport_BalanceSheet extends \app\AcctgReport
 			->fetch_all();
 
 		// account for value sign
+		$start_of_year_capital_cents = 0;
 		foreach ($sql_totals as &$entry)
 		{
 			$entry['types'] = \app\AcctgTAccountTypeLib::alltypesfortaccount($entry['taccount']);
 			// we multiply by -1 to adjust Dr/Cr to show positive instead of negative values
 			$entry['total'] = $entry['total'] * \app\AcctgTAccountTypeLib::sign($entry['type']) * \app\AcctgTAccountLib::sign($entry['taccount']) * (-1);
+			$start_of_year_capital_cents += \intval($entry['total'] * 100);
 		}
 
-		\var_dump($sql_totals); die;
+		// retrieve investment accounts
+		$sql_totals = \app\SQL::prepare
+			(
+				__METHOD__.':investments-accounts-for-the-period',
+				'
+					SELECT taccount.id taccount,
+					       type.id type,
+					       SUM(op.amount_value * op.type) total
+
+				      FROM `acctg__taccounts` taccount
+
+				      JOIN `acctg__transaction_operations` op
+					    ON taccount.id = op.taccount
+
+				      JOIN `acctg__transactions` tr
+					    ON op.transaction = tr.id
+
+				      JOIN `acctg__taccount_types` type
+					    ON type.id = taccount.type
+
+				     WHERE tr.date >= :start_of_year
+                       AND tr.group <=> :group
+					   AND type.lft >= :investments_lft
+					   AND type.rgt <= :investments_rgt
+
+					 GROUP BY taccount.id
+				'
+			)
+			->num(':investments_lft', $investments_type['lft'])
+			->num(':investments_rgt', $investments_type['rgt'])
+			->num(':group', $this->get('group', null))
+			->date(':start_of_year', \app\Acctg::fiscalyear_start_for($date_to, $this->get('group', null)))
+			->run()
+			->fetch_all();
+
+		// account for value sign
+		$investments_for_period_cents = 0;
+		foreach ($sql_totals as &$entry)
+		{
+			$entry['types'] = \app\AcctgTAccountTypeLib::alltypesfortaccount($entry['taccount']);
+			// we multiply by -1 to adjust Dr/Cr to show positive instead of negative values
+			$entry['total'] = $entry['total'] * \app\AcctgTAccountTypeLib::sign($entry['type']) * \app\AcctgTAccountLib::sign($entry['taccount']) * (-1);
+			$investments_for_period_cents += \intval($entry['total'] * 100);
+		}
+
+		// Calculate Income Statement Totals
+		// --------------------------------------------------------------------
+
+		$revenue = \app\AcctgTAccountTypeLib::find_entry(['slugid' => 'revenue']);
+
+		$sql_totals_revenue = \app\SQL::prepare
+			(
+				__METHOD__,
+				'
+					SELECT taccount.id taccount,
+					       type.id type,
+					       SUM(op.amount_value * op.type) total
+
+				      FROM `acctg__taccounts` taccount
+
+				      JOIN `acctg__transaction_operations` op
+					    ON taccount.id = op.taccount
+
+				      JOIN `acctg__transactions` tr
+					    ON op.transaction = tr.id
+
+				      JOIN `acctg__taccount_types` type
+					    ON type.id = taccount.type
+
+				     WHERE tr.date >= :start_of_year
+                       AND tr.group <=> :group
+					   AND type.lft >= :revenue_lft
+					   AND type.rgt <= :revenue_rgt
+
+					 GROUP BY taccount.id
+				'
+			)
+			->num(':revenue_lft', $revenue['lft'])
+			->num(':revenue_rgt', $revenue['rgt'])
+			->num(':group', $this->get('group', null))
+			->date(':start_of_year', \app\Acctg::fiscalyear_start_for($date_to, $this->get('group', null)))
+			->run()
+			->fetch_all();
+
+		$income_statement_totals_cents = 0;
+		foreach ($sql_totals_revenue as &$entry)
+		{
+			$entry['type'] = \app\AcctgTAccountTypeLib::typefortaccount($entry['taccount']);
+			// we multiply by -1 to adjust Cr/Dr to positive value representation
+			$entry['total'] = \intval(\floatval($entry['total']) * 100) * \app\AcctgTAccountTypeLib::sign($entry['type']) * \app\AcctgTAccountLib::sign($entry['taccount']) * (-1) / 100;
+			$income_statement_totals_cents += \intval($entry['total'] * 100);
+		}
+
+		$expenses = \app\AcctgTAccountTypeLib::find_entry(['slugid' => 'expenses']);
+
+		$sql_totals_expenses = \app\SQL::prepare
+			(
+				__METHOD__,
+				'
+					SELECT taccount.id taccount,
+					       type.id type,
+					       SUM(op.amount_value * op.type) total
+
+				      FROM `acctg__taccounts` taccount
+
+				      JOIN `acctg__transaction_operations` op
+					    ON taccount.id = op.taccount
+
+				      JOIN `acctg__transactions` tr
+					    ON op.transaction = tr.id
+
+				      JOIN `acctg__taccount_types` type
+					    ON type.id = taccount.type
+
+				     WHERE tr.date >= :start_of_year
+                       AND tr.group <=> :group
+					   AND type.lft >= :revenue_lft
+					   AND type.rgt <= :revenue_rgt
+
+					 GROUP BY taccount.id
+				'
+			)
+			->num(':revenue_lft', $expenses['lft'])
+			->num(':revenue_rgt', $expenses['rgt'])
+			->num(':group', $this->get('group', null))
+			->date(':start_of_year', \app\Acctg::fiscalyear_start_for($date_to, $this->get('group', null)))
+			->run()
+			->fetch_all();
+
+		$income_statement_totals_cents = 0;
+		foreach ($sql_totals_expenses as &$entry)
+		{
+			$entry['type'] = \app\AcctgTAccountTypeLib::typefortaccount($entry['taccount']);
+			// we multiply by -1 to adjust Cr/Dr to positive value representation
+			$entry['total'] = \intval(\floatval($entry['total']) * 100) * \app\AcctgTAccountTypeLib::sign($entry['type']) * \app\AcctgTAccountLib::sign($entry['taccount']) * (-1) / 100;
+			$income_statement_totals_cents -= \intval($entry['total'] * 100);
+		}
+
+		$draws = \app\AcctgTAccountTypeLib::find_entry(['slugid' => 'withdraws']);
+
+		$sql_totals_draws = \app\SQL::prepare
+			(
+				__METHOD__,
+				'
+					SELECT taccount.id taccount,
+					       type.id type,
+					       SUM(op.amount_value * op.type) total
+
+				      FROM `acctg__taccounts` taccount
+
+				      JOIN `acctg__transaction_operations` op
+					    ON taccount.id = op.taccount
+
+				      JOIN `acctg__transactions` tr
+					    ON op.transaction = tr.id
+
+				      JOIN `acctg__taccount_types` type
+					    ON type.id = taccount.type
+
+				     WHERE tr.date >= :start_of_year
+                       AND tr.group <=> :group
+					   AND type.lft >= :revenue_lft
+					   AND type.rgt <= :revenue_rgt
+
+					 GROUP BY taccount.id
+				'
+			)
+			->num(':revenue_lft', $draws['lft'])
+			->num(':revenue_rgt', $draws['rgt'])
+			->num(':group', $this->get('group', null))
+			->date(':start_of_year', \app\Acctg::fiscalyear_start_for($date_to, $this->get('group', null)))
+			->run()
+			->fetch_all();
+
+		$draws_totals_cents = 0;
+		foreach ($sql_totals_draws as &$entry)
+		{
+			$entry['type'] = \app\AcctgTAccountTypeLib::typefortaccount($entry['taccount']);
+			// we multiply by -1 to adjust Cr/Dr to positive value representation
+			$entry['total'] = \intval(\floatval($entry['total']) * 100) * \app\AcctgTAccountTypeLib::sign($entry['type']) * \app\AcctgTAccountLib::sign($entry['taccount']) * (-1) / 100;
+			$draws_totals_cents += \intval($entry['total'] * 100);
+		}
+
+		$capital_cents = $start_of_year_capital_cents + $investments_for_period_cents + $income_statement_totals_cents - $draws_totals_cents;
+
+		$liabilities_and_equity->newdataentry(['title' => 'Capital', 'total' => $capital_cents / 100]);
 
 		return $this;
 	}
