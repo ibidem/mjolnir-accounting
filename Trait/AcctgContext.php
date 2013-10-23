@@ -59,6 +59,22 @@ trait Trait_AcctgContext
 		return \app\AcctgReport_BalanceSheet::instance($options, $group);
 	}
 
+	/**
+	 * @return \mjolnir\accounting\AcctgReportInterface
+	 */
+	function acctgreport_cashflowstatement($options, $group = null)
+	{
+		return \app\AcctgReport_CashFlowStatement::instance($options, $group);
+	}
+
+	/**
+	 * @return \mjolnir\accounting\AcctgReportInterface
+	 */
+	function acctgreport_incomestatement($options, $group = null)
+	{
+		return \app\AcctgReport_IncomeStatement::instance($options, $group);
+	}
+
 	// ------------------------------------------------------------------------
 	// Acctg Collections
 

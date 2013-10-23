@@ -12,6 +12,34 @@ class AcctgTAccountTypeLib
 	use \app\Trait_MarionetteLib;
 	use \app\Trait_NestedSetModel;
 
+	/**
+	 * Roots are always considered positive as per their definition.
+	 *
+	 * @return int +1/-1
+	 */
+	static function sign($taccounttype)
+	{
+		$signature_trail = static::statement
+			(
+				__METHOD__,
+				'
+					SELECT entry.sign as sig
+					  FROM `'.static::table().'` entry
+
+					  JOIN `'.static::table().'` type
+					    ON type.id = :taccounttype
+
+				     WHERE entry.lft <= type.lft
+					   AND entry.rgt >= type.rgt;
+				'
+			)
+			->num(':taccounttype', $taccounttype)
+			->run()
+			->fetch_all();
+
+		return \app\Arr::intmul($signature_trail, 'sig');
+	}
+
 	// ------------------------------------------------------------------------
 	// Factory Interface
 
@@ -236,6 +264,40 @@ class AcctgTAccountTypeLib
 		{
 			return $entry['id'];
 		}
+	}
+
+	/**
+	 * @return int
+	 */
+	static function typefortaccount($taccount, $group = null)
+	{
+		return \app\AcctgTAccountLib::find_entry(['id' => $taccount, 'group' => $group])['type'];
+	}
+
+	/**
+	 * @return array type slugids for a given taccount
+	 */
+	static function alltypesfortaccount($taccount, $group = null)
+	{
+		$entries = static::statement
+			(
+				__METHOD__,
+				'
+					SELECT entry.slugid id
+					  FROM :table entry
+
+					  JOIN `'.\app\AcctgTAccountTypeLib::table().'` target
+						ON target.id = :target
+
+					 WHERE entry.lft <= target.lft
+					   AND entry.rgt >= target.rgt
+				'
+			)
+			->num(':target', static::typefortaccount($taccount, $group))
+			->run()
+			->fetch_all();
+
+		return \app\Arr::gather($entries, 'id');
 	}
 
 } # class

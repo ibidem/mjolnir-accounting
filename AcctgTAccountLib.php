@@ -12,6 +12,32 @@ class AcctgTAccountLib
 	use \app\Trait_MarionetteLib;
 	use \app\Trait_NestedSetModel;
 
+	/**
+	 * @return int +1/-1
+	 */
+	static function sign($taccount)
+	{
+		$signature_trail = static::statement
+			(
+				__METHOD__,
+				'
+					SELECT t.sign as sig
+					  FROM `'.static::table().'` t
+
+					  JOIN `'.static::table().'` taccount
+					    ON taccount.id = :taccount
+
+				     WHERE t.lft <= taccount.lft
+					   AND t.rgt >= taccount.rgt;
+				'
+			)
+			->num(':taccount', $taccount)
+			->run()
+			->fetch_all();
+
+		return \app\Arr::intmul($signature_trail, 'sig');
+	}
+
 	// ------------------------------------------------------------------------
 	// Factory interface
 

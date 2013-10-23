@@ -39,228 +39,33 @@ class AcctgReport_BalanceSheet extends \app\AcctgReport
 		$this->set('timestamp', \time());
 
 		// create root category
-		$this->reportview = \app\AcctgReportCategory::instance('Ordinary Income/Expense');
+		$this->reportview = \app\AcctgReportCategory::instance();
 		$this->reportview->nototals();
 
-		$interval = $this->get('interval', 'custom');
-		if ($interval === 'custom')
-		{
-			$date_from = \date_create_from_format('Y-m-d', $this->get('from_date', null));
-			$date_to = \date_create_from_format('Y-m-d', $this->get('to_date', null));
-		}
-		else if ($interval === 'all')
-		{
-			$table = \app\SQL::prepare
-				(
-					__METHOD__.':find_earliest_date',
-					'
-						SELECT MIN(entry.date) mindate,
-						       MAX(entry.date) maxdate
-					      FROM `'.\app\AcctgTransactionLib::table().'` entry
-						 WHERE entry.group <=> :group
-					'
-				)
-				->num(':group', $this->get('group', null))
-				->run()
-				->fetch_entry();
+		// Parse report settings
+		// ---------------------
 
-			$date_from = \date_create($table['mindate']);
-			$date_to = \date_create($table['maxdate']);
-		}
-		else if ($interval === 'today')
-		{
-			$date_from = \date_create();
-			$date_to = \date_create();
-			$this->set('breakdown', 'totals-only');
-		}
-		else if ($interval === 'current-month')
-		{
-			$date_from = \date_create(\date('Y-m-1'));
-			$date_to = \date_create(\date('Y-m-1'))->modify('last day of this month');
-			$this->set('breakdown', 'totals-only');
-		}
-		else # unsuported interval
-		{
-			throw new \app\Exception('Unknown interval type ['.$interval.']');
-		}
+		list($date_from, $date_to) = $this->calculate_interval();
+		list($keys, $breakdown) = $this->calculate_breakdown($date_from, $date_to, $this->reportview);
 
-		$breakdown = $this->get('breakdown', 'totals-only');
+		#
+		# The balance sheet is always done for a fixed point in time, so we
+		# only really use the "to" date value; since from is always fixed to
+		# "from the begining of recording" and hence doesn't matter as much.
+		#
 
-		$from = $date_from->format('Y-m-d');
-		$to = $date_to->format('Y-m-d');
-		if ($breakdown === 'totals-only')
+		// we need to adjust the breakdown to reflect this
+		foreach ($breakdown as &$conf)
 		{
-			if ($from != $to)
+			if ($conf['interval'] !== null)
 			{
-				$title = "$from&mdash;$to";
-			}
-			else # dates are identical
-			{
-				$title = $from;
-			}
-
-			$breakdown = array
-				(
-					'total' => array
-						(
-							'title' => $title,
-							'interval' => array
-								(
-									'from' => $from,
-									'to' => $to
-								),
-						),
-				);
-
-			// add column data handlers
-			$this->reportview->appendhandler('total', 'currency');
-			$this->reportview->addcalculator('total', 'currency');
-
-			$keys = [ 'total' ];
-		}
-		else if ($breakdown === 'month')
-		{
-			// %a = total number of days
-			$diff = \intval($date_to->diff($date_from)->format("%a"));
-
-			$daysinmonth = \cal_days_in_month(CAL_GREGORIAN, $date_from->format('m'), $date_from->format('Y'));
-
-			if ($diff < $daysinmonth)
-			{
-				if ($from != $to)
-				{
-					$title = "$from&mdash;$to";
-				}
-				else # dates are identical
-				{
-					$title = $from;
-				}
-
-				$breakdown = array
-					(
-						'total' => array
-							(
-								'title' => $title,
-								'interval' => array
-									(
-										'from' => $from,
-										'to' => $to
-									),
-							),
-					);
-
-				// add column data handlers
-				$this->reportview->appendhandler('total', 'currency');
-				$this->reportview->addcalculator('total', 'currency');
-
-				$keys = [ 'total' ];
-			}
-			else # diff >= $daysinmonth
-			{
-				$idx = 0;
-
-				$pivot = clone $date_from;
-				$daysinmonth = \cal_days_in_month(CAL_GREGORIAN, $pivot->format('m'), $pivot->format('Y'));
-				$breakdown = [];
-				do
-				{
-					if (\intval($pivot->format('d')) === 1)
-					{
-						$end = \date_create_from_format('Y-m-d', $pivot->format('Y-m-').$daysinmonth);
-
-						if ($end >= $date_to)
-						{
-							$title = $pivot->format('M \'y, ').$pivot->format('d').'&mdash;'.$date_to->format('d');
-							$lastday = $date_to->format('Y-m-d');
-						}
-						else # end < date_to
-						{
-							$title = $pivot->format('M \'y');
-							$lastday = $end->format('Y-m-d');
-						}
-					}
-					else # inexact month
-					{
-						$end = \date_create_from_format('Y-m-d', $pivot->format('Y-m-').$daysinmonth);
-
-						if ($end < $date_to)
-						{
-							$title = $pivot->format('M \'y, ').$pivot->format('d').'&mdash;'.$end->format('d');
-							$lastday = $end->format('Y-m-d');
-						}
-						else # end >= date_to
-						{
-							$title = $pivot->format('M \'y, ').$pivot->format('d').'&mdash;'.$date_to->format('d');
-							$lastday = $date_to->format('Y-m-d');
-						}
-					}
-
-					$key = 'date'.$idx;
-					$keys[] = $key;
-					$breakdown[$key] = array
-						(
-							'title' => $title,
-							'interval' => array
-								(
-									'from' => $pivot->format('Y-m-d'),
-									'to' => $lastday
-								),
-						);
-
-					// add column data handlers
-					$this->reportview->appendhandler($key, 'currency');
-					$this->reportview->addcalculator($key, 'currency');
-
-					$idx += 1;
-
-					$pivot->modify('first day of next month');
-				}
-				while ($pivot <= $date_to);
-
-				$breakdown['total'] = array
-					(
-						'title' => 'Total',
-						'interval' => null,
-					);
-
-				// add column data handlers
-				$this->reportview->appendhandler('total', 'currency');
-				$this->reportview->addcalculator
-					(
-						'total',
-						function ($k, AcctgReportDataInterface $dataentry) use ($keys)
-						{
-							$total = 0;
-
-							$nestedentries = $dataentry->entries();
-
-							if ( ! empty($nestedentries))
-							{
-								foreach ($nestedentries as $entry)
-								{
-									foreach ($keys as $datekey)
-									{
-										$total += \intval($entry->calculate($datekey) * 100);
-									}
-								}
-							}
-							else # not empty
-							{
-								foreach ($keys as $datakey)
-								{
-									$total += \intval($dataentry->calculate($datakey) * 100);
-								}
-							}
-
-							return $total / 100;
-						}
-					);
+				$conf['interval']['from'] = \app\AcctgTransactionLib::startoftime();
+				$conf['title'] = $conf['interval']['to'];
 			}
 		}
-		else # unsuported breakdown type
-		{
-			throw new \app\Exception('Unknown breakdown type ['.$breakdown.']');
-		}
+
+		// Add report headers
+		// ------------------
 
 		$this->headers = [];
 		foreach ($breakdown as $segment)
@@ -280,9 +85,10 @@ class AcctgReport_BalanceSheet extends \app\AcctgReport
 
 			$sql_totals = \app\SQL::prepare
 				(
-					__METHOD__,
+					__METHOD__.'account-totals',
 					'
-						SELECT op.taccount, SUM(op.amount_value * op.type) total
+						SELECT op.taccount,
+							   SUM(op.amount_value * op.type) total
 
 						  FROM `'.\app\AcctgTransactionOperationLib::table().'` op
 
@@ -301,13 +107,19 @@ class AcctgReport_BalanceSheet extends \app\AcctgReport
 				->run()
 				->fetch_all();
 
+			foreach ($sql_totals as $entry)
+			{
+				$entry['type'] = \app\AcctgTAccountTypeLib::typefortaccount($entry['taccount']);
+				$entry['total'] = $entry['total'] * \app\AcctgTAccountTypeLib::sign($entry['type']) * \app\AcctgTAccountLib::sign($entry['taccount']);
+			}
+
 			$totals[$key] = \app\Arr::gatherkeys($sql_totals, 'taccount', 'total');
 		}
 
-		// Resolve Income
+		// Resolve Assets
 		// --------------
 
-		$assetstype = \app\AcctgTAccountTypeLib::typebyname('current-assets');
+		$assetstype = \app\AcctgTAccountTypeLib::typebyname('assets');
 		$asset_taccounts = \app\AcctgTAccountLib::tree_hierarchy
 			(
 				null, null, 0,
@@ -335,7 +147,7 @@ class AcctgReport_BalanceSheet extends \app\AcctgReport
 			}
 		}
 
-		$incomeview = $this->reportview->newcategory('Income');
+		$incomeview = $this->reportview->newcategory('Assets');
 
 		$this->integrate_taccounts
 			(
@@ -343,10 +155,15 @@ class AcctgReport_BalanceSheet extends \app\AcctgReport
 				$asset_taccounts
 			);
 
-		// Resolve Expenses
-		// ----------------
+		// Wrapper
+		// -------
 
-		$expensestype = \app\AcctgTAccountTypeLib::typebyname('expenses');
+		$liabilities_and_equity = $this->reportview->newcategory('Liabilities &amp; Equity');
+
+		// Resolve Liabilities
+		// -------------------
+
+		$expensestype = \app\AcctgTAccountTypeLib::typebyname('liabilities');
 		$expense_taccounts = \app\AcctgTAccountLib::tree_hierarchy
 			(
 				null, null, 0,
@@ -365,7 +182,8 @@ class AcctgReport_BalanceSheet extends \app\AcctgReport
 			{
 				if (isset($totals[$key][$taccount['id']]))
 				{
-					$taccount[$key] = \floatval($totals[$key][$taccount['id']]);
+					// we multiply by -1 to account for Cr/Dr inversion
+					$taccount[$key] = \floatval($totals[$key][$taccount['id']]) * (-1);
 				}
 				else # no total (ie. no operations involving the taccount exist)
 				{
@@ -374,78 +192,90 @@ class AcctgReport_BalanceSheet extends \app\AcctgReport
 			}
 		}
 
-		$expenseview = $this->reportview->newcategory('Expenses');
+		$liabilitiesview = $liabilities_and_equity->newcategory('Liabilities');
 
 		$this->integrate_taccounts
 			(
-				$expenseview,
+				$liabilitiesview,
 				$expense_taccounts
 			);
 
-		// Totals
-		// ------
+		// Resolve Capital
+		// ---------------
 
-		$nettotal = [];
-		foreach ($incomeview->totals() as $key => $total)
+		$capitalview = $liabilities_and_equity->newdataentry(['title' => 'Capital']);
+
+		#
+		# Capital is calculated as total from Statement of Owner's Equity,
+		# which sums up to:
+		#
+		# ((Captial Stock + Investments + Retained Earnings) @ start of year)
+		#	+ Investments total + (Income Statement Total) - Withdrawls
+		#
+
+		// Total Start of Year OE
+		// ----------------------
+
+		$investments_type = \app\AcctgTAccountTypeLib::find_entry(['slugid' => 'investments']);
+		$capitalstock_type = \app\AcctgTAccountTypeLib::find_entry(['slugid' => 'capital-stock']);
+		$retained_earnings_type = \app\AcctgTAccountTypeLib::find_entry(['slugid' => 'retained-earnings']);
+
+		// retrieve all relevant accounts
+		$sql_totals = \app\SQL::prepare
+			(
+				__METHOD__.':investments-captalstock-retained-earnings-accounts',
+				'
+					SELECT op.taccount,
+					       tacct_type.id type,
+						   SUM(op.amount_value * op.type) total
+
+					  FROM `'.\app\AcctgTransactionOperationLib::table().'` op
+
+					  JOIN `'.\app\AcctgTransactionLib::table().'` tr
+						ON tr.id = op.transaction
+
+					  JOIN `'.\app\AcctgTAccountLib::table().'` taccount
+						ON taccount.id = op.taccount
+
+					  JOIN `'.\app\AcctgTAccountTypeLib::table().'` tacct_type
+						ON tacct_type.id = taccount.type
+
+					 WHERE tr.group <=> :group
+					   AND tr.date <= :start_of_year
+					   AND
+					   (
+							(tacct_type.lft >= :capital_stock_lft AND tacct_type.rgt <= :capital_stock_rgt)
+							OR
+							(tacct_type.lft >= :investments_lft AND tacct_type.rgt <= :investments_rgt)
+							OR
+							(tacct_type.lft >= :retained_earnings_lft AND tacct_type.rgt <= :retained_earnings_rgt)
+					   )
+
+					 GROUP BY op.taccount
+				'
+			)
+			->num(':capital_stock_lft', $capitalstock_type['lft'])
+			->num(':capital_stock_rgt', $capitalstock_type['rgt'])
+			->num(':investments_lft', $investments_type['lft'])
+			->num(':investments_rgt', $investments_type['rgt'])
+			->num(':retained_earnings_lft', $retained_earnings_type['lft'])
+			->num(':retained_earnings_rgt', $retained_earnings_type['rgt'])
+			->num(':group', $this->get('group', null))
+			->date(':start_of_year', \app\Acctg::fiscalyear_start_for($date_to, $this->get('group', null)))
+			->run()
+			->fetch_all();
+
+		// account for value sign
+		foreach ($sql_totals as &$entry)
 		{
-			$nettotal[$key] = \intval($total * 100);
+			$entry['types'] = \app\AcctgTAccountTypeLib::alltypesfortaccount($entry['taccount']);
+			// we multiply by -1 to adjust Dr/Cr to show positive instead of negative values
+			$entry['total'] = $entry['total'] * \app\AcctgTAccountTypeLib::sign($entry['type']) * \app\AcctgTAccountLib::sign($entry['taccount']) * (-1);
 		}
 
-		foreach ($expenseview->totals() as $key => $total)
-		{
-			$nettotal[$key] += \intval($total * 100);
-		}
-
-		foreach ($nettotal as $key => $total)
-		{
-			$nettotal[$key] = $nettotal[$key] / 100;
-		}
-
-		if ($nettotal['total'] >= 0)
-		{
-			$this->reportview->newdataentry($nettotal + ['title' => '<b>Net Income</b>']);
-		}
-		else # balance < 0
-		{
-			$this->reportview->newdataentry($nettotal + ['title' => '<b>Net Loss</b>']);
-		}
+		\var_dump($sql_totals); die;
 
 		return $this;
-	}
-
-	/**
-	 * Recursively resolve TAccount hierarchy.
-	 */
-	function integrate_taccounts(AcctgReportEntryInterface $root, $taccounts)
-	{
-		if ( ! empty($taccounts))
-		{
-			foreach ($taccounts as $taccount)
-			{
-				$acctentry = $root->newdataentry($taccount);
-				$this->integrate_taccounts($acctentry, $taccount['subentries']);
-			}
-		}
-	}
-
-	/**
-	 * @return string
-	 */
-	function render_header()
-	{
-		$headerview = '<th class="acctg-report--placeholder">&nbsp;</th>';
-
-		if (empty($this->headers))
-		{
-			return $headerview;
-		}
-
-		foreach ($this->headers as $header)
-		{
-			$headerview .= "<th>$header</th>";
-		}
-
-		return $headerview;
 	}
 
 } # class

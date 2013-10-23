@@ -36,21 +36,30 @@ class AcctgReportCategory extends \app\AcctgReportEntry
 	 */
 	function render($indent = null)
 	{
-		$render =
-			'
-				<tr>
-					<td colspan="'.$this->columncount().'" class="'.$this->displayclass().'">
-						'.$this->indent($indent, $this->get('title', null)).'
-					</td>
-				</tr>
-			';
+		$title = $this->get('title', null);
+
+		if ($title !== null)
+		{
+			$render =
+				'
+					<tr>
+						<td colspan="'.$this->columncount().'" class="'.$this->displayclass().'">
+							'.$this->indent($indent, $this->get('title', null)).'
+						</td>
+					</tr>
+				';
+		}
+		else # wrapper category
+		{
+			$render = '';
+		}
 
 		foreach ($this->entries() as $entry)
 		{
-			$render .= $entry->render($indent + 1);
+			$render .= $entry->render($indent + ($title !== null ? 1 : 0));
 		}
 
-		if ($this->show_totals)
+		if ($title !== null && $this->show_totals)
 		{
 			$totals = \app\AcctgReportData::instance($this->totals() + ['title' => $this->totalstitle($this->title())]);
 			$totals->displayclass_is('acctg-report--totalsrow');

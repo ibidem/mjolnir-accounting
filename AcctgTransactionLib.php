@@ -19,4 +19,30 @@ class AcctgTransactionLib
 		return \app\Validator::instance($input);
 	}
 
+	/**
+	 * @return string date of first transaction
+	 */
+	static function startoftime()
+	{
+		$result = static::statement
+			(
+				__METHOD__,
+				'
+					SELECT MIN(date)
+					  FROM :table
+				'
+			)
+			->run()
+			->fetch_calc();
+
+		if ($result !== null)
+		{
+			return $result;
+		}
+		else # result === null
+		{
+			return \date('Y-m-d');
+		}
+	}
+
 } # class
