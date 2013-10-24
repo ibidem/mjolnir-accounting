@@ -12,8 +12,50 @@ class AcctgTAccountLib
 	use \app\Trait_MarionetteLib;
 	use \app\Trait_NestedSetModel;
 
+	/**
+	 * @return int +1/-1
+	 */
+	static function sign($taccount)
+	{
+		$signature_trail = static::statement
+			(
+				__METHOD__,
+				'
+					SELECT t.sign as sig
+					  FROM `'.static::table().'` t
+
+					  JOIN `'.static::table().'` taccount
+					    ON taccount.id = :taccount
+
+				     WHERE t.lft <= taccount.lft
+					   AND t.rgt >= taccount.rgt;
+				'
+			)
+			->num(':taccount', $taccount)
+			->run()
+			->fetch_all();
+
+		return \app\Arr::intmul($signature_trail, 'sig');
+	}
+
 	// ------------------------------------------------------------------------
 	// Factory interface
+
+	/**
+	 * Prevent accidental code calls.
+	 */
+	static function process(array $input)
+	{
+		throw new \app\Exception('Hardcoded inserts not allowed. Please use tree_push.');
+	}
+
+	/**
+	 * Prevent accidental code calls.
+	 */
+	static function update_process($id, array $input)
+	{
+		throw new \app\Exception('Hardcoded updates not allowed. Please use tree_update.');
+	}
 
 	/**
 	 * Ensure fields, except lft, rtg
@@ -35,14 +77,6 @@ class AcctgTAccountLib
 
 		$prt = static::tree_parentkey();
 		isset($input[$prt]) or $input[$prt] = null;
-	}
-
-	/**
-	 * Prevent accidental code calls.
-	 */
-	static function process(array $input)
-	{
-		throw new \app\Exception('Hardcoded inserts not allowed. Please use tree_push.');
 	}
 
 	/**
@@ -119,14 +153,6 @@ class AcctgTAccountLib
 		{
 			return $errors;
 		}
-	}
-
-	/**
-	 * Prevent accidental code calls.
-	 */
-	static function update_process()
-	{
-		throw new \app\Exception('Hardcoded updates not allowed. Please use tree_update.');
 	}
 
 	/**

@@ -7,14 +7,8 @@
  * @copyright  (c) 2013, Ibidem Team
  * @license    https://github.com/ibidem/ibidem/blob/master/LICENSE.md
  */
-class AcctgTAccountTypeHintCollection extends \app\MarionetteCollection
+abstract class AcctgReportEntry extends \app\Instantiatable implements AcctgReportEntryInterface
 {
-	/**
-	 * @return array
-	 */
-	static function config()
-	{
-		return \app\AcctgTAccountTypeHintModel::config();
-	}
-
+	use \app\Trait_AcctgReportEntry;
+	
 } # class

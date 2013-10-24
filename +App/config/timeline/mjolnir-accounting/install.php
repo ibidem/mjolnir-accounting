@@ -1,38 +1,34 @@
 <?php return array
 	(
 		'description'
-			=> 'Install for AcctgTAccountTypeHint, AcctgTAccountType, AcctgTAccount, AcctgJournal, AcctgTransaction and AcctgTransactionOperation.',
+			=> 'Install for AcctgTAccountType, AcctgTAccount, AcctgTAccountLock, AcctgJournal, AcctgTransaction, AcctgTransactionLock and AcctgTransactionOperation.',
 
 		'configure' => array
 			(
 				'tables' => array
 					(
-						\app\AcctgTAccountTypeHintLib::table(),
 						\app\AcctgTAccountTypeLib::table(),
 						\app\AcctgTAccountLib::table(),
+						\app\AcctgTAccountLockLib::table(),
 						\app\AcctgJournalLib::table(),
 						\app\AcctgTransactionLib::table(),
-						\app\AcctgTransactionOperationLib::table()
+						\app\AcctgTransactionLockLib::table(),
+						\app\AcctgTransactionOperationLib::table(),
+						\app\AcctgSettingsLib::table(),
 					),
 			),
 
 		'tables' => array
 			(
-				\app\AcctgTAccountTypeHintLib::table() =>
-					'
-						`id`       :key_primary,
-						`slugid`   :slugid                               comment "Identifier for use when referencing in code.",
-						`title`    :title                                comment "Type unique and clean name.",
-
-						PRIMARY KEY (id)
-					',
-
 				\app\AcctgTAccountTypeLib::table() =>
 					'
-						`id`       :key_primary,
-						`slugid`   :slugid	                             comment "Identifier for use when referencing in code.",
-						`title`    :title                                comment "Type unique and clean name.",
-						`typehint` :key_foreign                          comment "Pseudo-category name for use in user interfaces.",
+						`id`     :key_primary,
+						`slugid` :slugid	                             comment "Identifier for use when referencing in code.",
+						`title`  :title                                  comment "Type unique and clean name.",
+						`sign`   tinyint DEFAULT +1                      comment "Formula sign, relative to parent account. (root types have +1)",
+						`usable` :boolean                                comment "Usable indicates that the type is a hard type and not a logical type",
+						`lft`    :nestedsetindex                         comment "Left position in Nested Set.",
+						`rgt`    :nestedsetindex                         comment "Right position in Nested Set.",
 
 						PRIMARY KEY (id)
 					',
@@ -40,6 +36,7 @@
 				\app\AcctgTAccountLib::table() =>
 					'
 						`id`        :key_primary,
+						`group`     :key_foreign                         comment "Accounting group.",
 						`type`	    :key_foreign                         comment "Account type; used to determine place in formulas.",
 						`title`     :title,
 						`sign`      tinyint DEFAULT +1                   comment "Account value sign; used in formulas. Contra accounts have -1, non-contra accounts have +1.",
@@ -49,11 +46,23 @@
 						PRIMARY KEY (id)
 					',
 
+				\app\AcctgTAccountLockLib::table() =>
+					'
+						`id`       :key_primary,
+						`taccount` :key_foreign,
+						`issuer`   :identifier                           comment "Identifier key, used to remove locks.",
+						`cause`    :block                                comment "Subject to why the account is locked.",
+
+						PRIMARY KEY (id)
+					',
+
 				\app\AcctgJournalLib::table() =>
 					'
-						`id`    :key_primary,
-						`title` :title                                   comment "Journal name.",
-						`user`  :key_foreign                             comment "User responsible for the creation of the journal.",
+						`id`        :key_primary,
+						`slugid`    :identifier DEFAULT NULL             comment "Special name given to specialized journals. Typically protected journals.",
+						`title`     :title                               comment "Journal name.",
+						`user`      :key_foreign                         comment "User responsible for the creation of the journal.",
+						`protected` boolean                              comment "Some journals (eg. system journals) are protected; meaning they may not be deleted.",
 
 						PRIMARY KEY (id)
 					',
@@ -61,11 +70,23 @@
 				\app\AcctgTransactionLib::table() =>
 					'
 						`id`          :key_primary,
+						`group`       :key_foreign                       comment "Accounting group.",
 						`journal`     :key_foreign                       comment "Journal transaction belongs to.",
+						`method`      :identifier DEFAULT "manual"       comment "Method by which the entry was created. Only used in journal maintenance and entry migrations.",
 						`user`        :key_foreign                       comment "User responsible for the creation of the journal.",
 						`description` :block                             comment "Comments on the transaction.",
 						`date`        :datetime_required                 comment "Date assigned to transaction; user selected, as in classical accounting journal terms.",
 						`timestamp`   :datetime_required                 comment "The real time the transaction was created for maintanence purposes.",
+
+						PRIMARY KEY (id)
+					',
+
+				\app\AcctgTransactionLockLib::table() =>
+					'
+						`id`          :key_primary,
+						`transaction` :key_foreign,
+						`issuer`      :identifier                        comment "Identifier key, used to remove locks.",
+						`cause`       :block                             comment "Subject to why the transaction is locked.",
 
 						PRIMARY KEY (id)
 					',
@@ -81,20 +102,30 @@
 						`note`         :block                            comment "Operation details.",
 
 						PRIMARY KEY (id)
+					',
+
+				\app\AcctgSettingsLib::table() =>
 					'
+						`id`       :key_primary,
+						`group`    :key_foreign                         comment "Accounting group.",
+						`slugid`   :identifier,
+						`taccount` :key_foreign,
+
+						PRIMARY KEY (id)
+					',
 			),
 
 		'bindings' => array
 			(
 				// field => [ table, on_delete, on_update ]
 
-				\app\AcctgTAccountTypeLib::table() => array
-					(
-						'typehint' => [\app\AcctgTAccountTypeHintLib::table(), 'RESTRICT', 'CASCADE'],
-					),
 				\app\AcctgTAccountLib::table() => array
 					(
 						'type' => [\app\AcctgTAccountTypeLib::table(), 'SET NULL', 'CASCADE'],
+					),
+				\app\AcctgTAccountLockLib::table() => array
+					(
+						'taccount' => [\app\AcctgTAccountLib::table(), 'RESTRICT', 'CASCADE'],
 					),
 				\app\AcctgJournalLib::table() => array
 					(
@@ -105,42 +136,25 @@
 						'journal' => [\app\AcctgJournalLib::table(), 'RESTRICT', 'CASCADE'],
 						'user' => [\app\Model_User::table(), 'SET NULL', 'CASCADE'],
 					),
+				\app\AcctgTransactionLockLib::table() => array
+					(
+						'transaction' => [\app\AcctgTransactionLib::table(), 'RESTRICT', 'CASCADE'],
+					),
 				\app\AcctgTransactionOperationLib::table() => array
 					(
 						'transaction' => [\app\AcctgTransactionLib::table(), 'RESTRICT', 'CASCADE'],
 						'taccount' => [\app\AcctgTAccountLib::table(), 'RESTRICT', 'CASCADE'],
-					)
+					),
+				\app\AcctgSettingsLib::table() => array
+					(
+						'taccount' => [\app\AcctgTAccountLib::table(), 'RESTRICT', 'CASCADE'],
+					),
 			),
 
 		'populate' => function ($db)
 			{
-				// inject taccount type hints
-				$hints = \app\Arr::trim(\app\CFS::config('timeline/mjolnir-accounting/1.0.0/taccount-type-hints'));
-				\app\Pdx::massinsert
-					(
-						'mjolnir:accounting:inject-taccount-type-hints',
-						$db, \app\AcctgTAccountTypeHintLib::table(),
-						$hints,
-						[
-							'strs' => ['slugid', 'title'],
-						]
-					);
-
-				// inject taccount types
-				$taccount_type_hints = \app\Pdx::select($db, \app\AcctgTAccountTypeHintLib::table());
-				$hintmapping = \app\Arr::gatherkeys($taccount_type_hints, 'slugid', 'id');
-				$raw_taccount_types = \app\Arr::trim(\app\CFS::config('timeline/mjolnir-accounting/1.0.0/taccount-types'));
-				$taccount_types = \app\Arr::applymapping($raw_taccount_types, 'typehint', $hintmapping);
-				\app\Pdx::massinsert
-					(
-						'mjolnir:accounting:inject-taccount-types',
-						$db, \app\AcctgTAccountTypeLib::table(),
-						$taccount_types,
-						[
-							'nums' => ['typehint'],
-							'strs' => ['slugid', 'title'],
-						]
-					);
+				\app\AcctgTAccountTypeLib::install($db);
+				\app\AcctgJournalLib::install($db);
 			},
 
 	); # config

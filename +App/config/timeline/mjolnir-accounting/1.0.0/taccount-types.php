@@ -1,117 +1,173 @@
 <?php return array
 	(
-		#
-		# Assets Account Types
-		#
-
-		'cash' => array
+		'assets' => array
 			(
-				'slugid' => 'cash',
-				'title' => 'Cash',
-				'typehint' => 'assets-acct',
-			),
-		'bank' => array
-			(
-				'slugid' => 'bank',
-				'title' => 'Bank',
-				'typehint' => 'assets-acct',
-			),
-		'current-assets' => array
-			(
-				'slugid' => 'current-assets',
-				'title' => 'Current Assets',
-				'typehint' => 'assets-acct',
-			),
-		'long-term-assets' => array
-			(
-				'slugid' => 'long-term-assets',
-				'title' => 'Long-Term Assets',
-				'typehint' => 'assets-acct',
-			),
-		'depreciation' => array
-			(
-				'slugid' => 'depreciation',
-				'title' => 'Depreciation',
-				'typehint' => 'assets-acct',
+				'slugid' => 'assets',
+				'title' => 'Asset Accounts',
+				'parent' => null,
+				'sign' => +1,
+				'usable' => false,
 			),
 
-		#
-		# Equity - Liability Account Types
-		#
+			'cash' => array
+				(
+					'slugid' => 'cash',
+					'title' => 'Cash',
+					'parent' => 'assets',
+					'sign' => +1,
+					'usable' => true,
+				),
 
-		'current-liabilities' => array
-			(
-				'slugid' => 'current-liabilities',
-				'title' => 'Current Liabilities',
-				'typehint' => 'liability-acct',
-			),
-		'long-term-liabilities' => array
-			(
-				'slugid' => 'long-term-liabilities',
-				'title' => 'Long-Term Liabilities',
-				'typehint' => 'liability-acct',
-			),
+				'bank' => array
+					(
+						'slugid' => 'bank',
+						'title' => 'Bank',
+						'parent' => 'cash',
+						'sign' => +1,
+						'usable' => true,
+					),
 
-		#
-		# Equity - OE Account Types
-		#
+			'current-assets' => array
+				(
+					'slugid' => 'current-assets',
+					'title' => 'Current Assets',
+					'parent' => 'assets',
+					'sign' => +1,
+					'usable' => true,
+				),
 
-		'investments' => array
-			(
-				'slugid' => 'investments',
-				'title' => 'Investments',
-				'typehint' => 'oe-acct',
-			),
-		'capital-stock' => array
-			(
-				'slugid' => 'capital-stock',
-				'title' => 'Capital Stock',
-				'typehint' => 'oe-acct',
-			),
-		'retained-earnings' => array
-			(
-				'slugid' => 'retained-earnings',
-				'title' => 'Retained Earnings',
-				'typehint' => 'oe-acct',
-			),
+				'long-term-assets' => array
+					(
+						'slugid' => 'long-term-assets',
+						'title' => 'Long-Term Assets',
+						'parent' => 'current-assets',
+						'sign' => +1,
+						'usable' => true,
+					),
 
-		#
-		# Equity - Withdraws Account Types
-		#
+			'depreciation' => array
+				(
+					'slugid' => 'depreciation',
+					'title' => 'Depreciation',
+					'parent' => 'assets',
+					'sign' => +1,
+					'usable' => true,
+				),
 
-		'withdraws' => array
+		'equity' => array
 			(
-				'slugid' => 'withdraws',
-				'title' => 'Withdraws',
-				'typehint' => 'withdraws-acct',
-			),
-
-		#
-		# Equity - Revenue Account Types
-		#
-
-		'revenue' => array
-			(
-				'slugid' => 'revenue',
-				'title' => 'Revenue',
-				'typehint' => 'revenue-acct',
+				'slugid' => 'equity',
+				'title' => 'Equity Accounts',
+				'parent' => null,
+				'sign' => +1,
+				'usable' => false,
 			),
 
-		#
-		# Equity - Expenses Account Types
-		#
+			'liabilities' => array
+				(
+					'slugid' => 'liabilities',
+					'title' => 'Liabilities',
+					'parent' => 'equity',
+					'sign' => +1,
+					'usable' => false,
+				),
 
-		'general-expenses' => array
-			(
-				'slugid' => 'general-expenses',
-				'title' => 'General Expenses',
-				'typehint' => 'expenses-acct',
-			),
-		'depreciation-expenses' => array
-			(
-				'slugid' => 'depreciation-expenses',
-				'title' => 'Depreciation Expenses',
-				'typehint' => 'expenses-acct',
-			),
+				'current-liabilities' => array
+					(
+						'slugid' => 'current-liabilities',
+						'title' => 'Current Liabilities',
+						'parent' => 'liabilities',
+						'sign' => +1,
+						'usable' => true,
+					),
+				'long-term-liabilities' => array
+					(
+						'slugid' => 'long-term-liabilities',
+						'title' => 'Long-Term Liabilities',
+						'parent' => 'liabilities',
+						'sign' => +1,
+						'usable' => true,
+					),
+
+			'owner-equity' => array
+				(
+					'slugid' => 'owner-equity',
+					'title' => 'Owner\'s Equity',
+					'parent' => 'equity',
+					'sign' => +1,
+					'usable' => false,
+				),
+
+				'capital-stock' => array
+					(
+						'slugid' => 'capital-stock',
+						'title' => 'Capital Stock',
+						'parent' => 'owner-equity',
+						'sign' => +1,
+						'usable' => true,
+					),
+
+				'investments' => array
+					(
+						'slugid' => 'investments',
+						'title' => 'Investments',
+						'parent' => 'owner-equity',
+						'sign' => +1,
+						'usable' => true,
+					),
+
+				'withdraws' => array
+					(
+						'slugid' => 'withdraws',
+						'title' => 'Withdraws',
+						'parent' => 'owner-equity',
+						'sign' => -1,
+						'usable' => true,
+					),
+
+				'retained-earnings' => array
+					(
+						'slugid' => 'retained-earnings',
+						'title' => 'Retained Earnings',
+						'parent' => 'owner-equity',
+						'sign' => +1,
+						'usable' => true,
+					),
+
+			'revenue' => array
+				(
+					'slugid' => 'revenue',
+					'title' => 'Revenue',
+					'parent' => 'equity',
+					'sign' => +1,
+					'usable' => true,
+				),
+
+			'expenses' => array
+				(
+					'slugid' => 'expenses',
+					'title' => 'Expenses',
+					'parent' => 'equity',
+					'sign' => -1,
+					'usable' => false,
+				),
+
+				'general-expenses' => array
+					(
+						'slugid' => 'general-expenses',
+						'title' => 'General Expenses',
+						'parent' => 'expenses',
+						'sign' => +1,
+						'usable' => true,
+					),
+
+				'depreciation-expenses' => array
+					(
+						'slugid' => 'depreciation-expenses',
+						'title' => 'Depreciation Expenses',
+						'parent' => 'expenses',
+						'sign' => +1,
+						'usable' => true,
+					),
 
 	); # config

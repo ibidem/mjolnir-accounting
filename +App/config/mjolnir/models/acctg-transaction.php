@@ -8,6 +8,7 @@
 		'fields' => array
 			(
 				'id' => 'number',
+				'group' => 'number',
 			// journal in which the transaction is logged into
 				'journal' => array
 					(

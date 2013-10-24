@@ -34,11 +34,11 @@
 	<thead class="acctg-journal-head">
 		<tr>
 			<th colspan="2">Date</th>
-			<th>id</th>
+			<th>#id</th>
 			<th>Accounts &amp; Description</th>
 			<th>Debit</th>
 			<th>Credit</th>
-			<th>Note</th>
+			<th>Notes</th>
 			<th>&nbsp;</th>
 		</tr>
 	</thead>
@@ -60,6 +60,7 @@
 				</tbody>
 			<? endif; ?>
 			<? foreach ($months as $month => $days): ?>
+				<? $month = \intval($month) ?>
 				<? foreach ($days as $day => $transactions): ?>
 					<? foreach ($transactions as $transaction): ?>
 						<tbody class="acctg-journal-table--transaction-tbody">
@@ -85,7 +86,7 @@
 											<? endif; ?>
 										</td>
 										<td>
-											#<a href="<?= $transaction['action'](null) ?>"><?= $transaction['id'] ?></a>
+											<a href="<?= $transaction['action'](null) ?>"><?= \sprintf('%010s', $transaction['id']) ?></a>
 										</td>
 									<? else: # not first row ?>
 										<td colspan="3">&nbsp;</td>

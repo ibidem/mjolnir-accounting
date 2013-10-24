@@ -10,120 +10,85 @@
 trait Trait_AcctgContext
 {
 	/**
+	 * @return array
+	 */
+	function acctgtypesmap()
+	{
+		$types = \app\AcctgTAccountTypeLib::entries(null, null);
+		return \app\Arr::tablemap($types, 'id');
+	}
+
+	/**
+	 * @return int type
+	 */
+	function acctgtype($type)
+	{
+		$types = \app\AcctgTAccountTypeLib::entries(null, null);
+		return \app\Arr::gatherkeys($types, 'slugid', 'id')[$type];
+	}
+
+	/**
+	 * @return array
+	 */
+	function acctgtaccount($id)
+	{
+		$taccount = \app\AcctgTAccountLib::entry($id);
+		$this->embed_taccount_handlers($taccount);
+		return $taccount;
+	}
+
+	// ------------------------------------------------------------------------
+	// Internal
+
+	/**
+	 * @return array
+	 */
+	function acctgroutemap()
+	{
+		return \app\CFS::config('mjolnir/acctg/routes');
+	}
+
+	// Reports
+	// ------------------------------------------------------------------------
+
+	/**
+	 * @return \mjolnir\accounting\AcctgReportInterface
+	 */
+	function acctgreport_balancesheet($options, $group = null)
+	{
+		return \app\AcctgReport_BalanceSheet::instance($options, $group);
+	}
+
+	/**
+	 * @return \mjolnir\accounting\AcctgReportInterface
+	 */
+	function acctgreport_cashflowstatement($options, $group = null)
+	{
+		return \app\AcctgReport_CashFlowStatement::instance($options, $group);
+	}
+
+	/**
+	 * @return \mjolnir\accounting\AcctgReportInterface
+	 */
+	function acctgreport_incomestatement($options, $group = null)
+	{
+		return \app\AcctgReport_IncomeStatement::instance($options, $group);
+	}
+
+	// ------------------------------------------------------------------------
+	// Acctg Collections
+
+	/**
 	 * @return array taccount types
 	 */
 	function acctgtypes
 		(
-			$page = null, $limit = null, $offset = 0,
-			array $order = null,
+			$page = null, $limit = null, $offset = 0, $depth = null,
 			array $constraints = null
 		)
 	{
 		return \app\AcctgTAccountTypeLib::entries
-			($page, $limit, $offset, $order, $constraints);
-	}
-
-	/**
-	 * @return array taccount types as optgroup array
-	 */
-	function acctgtypes_optgroups(array $constraints = null)
-	{
-		$types = static::acctgtypes(null, null, 0, null, $constraints);
-		$hints = \app\AcctgTAccountTypeHintLib::entries(null, null);
-		$hintsmap = \app\Arr::gatherkeys($hints, 'id', 'title');
-
-		$groups = [];
-		foreach ($types as $type)
-		{
-			$group = $hintsmap[$type['typehint']];
-			isset($groups[$group]) or $groups[$group] = [];
-			$groups[$group][$type['id']] = $type['title'];
-		}
-
-		return $groups;
-	}
-
-	/**
-	 * This method is designed to be used in conjuction with
-	 * HTMLFormField_Select objects,
-	 *
-	 * eg.
-	 *
-	 *	$form->select('Example Select', 'example)
-	 *		->options_liefhierarchy($context->acctgtaccounts_options_liefhierarchy())
-	 *
-	 * @return array taccounts as liefhierarchy array
-	 */
-	function acctgtaccounts_options_liefhierarchy(array $constraints = null, $indenter = null, $accountslabel = null, $blanklabel = null, $blankkey = null)
-	{
-		$indenter !== null or $indenter = ' &mdash; ';
-		$accountslabel !== null or $accountslabel = \app\Lang::term('Accounts');
-		$blanklabel !== null or $blanklabel = '- '.\app\Lang::term('select account').' -';
-		$blankkey !== null or $blankkey = '';
-
-		$options = array
-			(
-				$blankkey => $blanklabel,
-				$accountslabel => [],
-			);
-
-		$depthgroups = [ 0 => &$options[$accountslabel] ];
-
-		$taccounts = static::acctgtaccounts(null, null, 0, null, $constraints);
-
-		foreach ($taccounts as $taccount)
-		{
-			if ($taccount['rgt'] - $taccount['lft'] == 1)
-			{
-				$depthgroups[$taccount['depth']][$taccount['id']] = \str_repeat($indenter, $taccount['depth'] + 1).$taccount['title'];
-			}
-			else # rgt - lft > 1, node has children
-			{
-				$key = \str_repeat($indenter, $taccount['depth'] + 1).$taccount['title'];
-				$depthgroups[$taccount['depth']][$key] = [];
-				$depthgroups[$taccount['depth'] + 1] = &$depthgroups[$taccount['depth']][$key];
-			}
-		}
-
-		return $options;
-	}
-
-	/**
-	 * This method is designed to be used in conjuction with
-	 * HTMLFormField_Select objects.
-	 *
-	 * Unlike the liefhierarchy equivalent using this method will make all
-	 * accounts selectable. The method is used in cases such as assigning a
-	 * parent taccount on creation.
-	 *
-	 * eg.
-	 *
-	 *	$form->select('Example Select', 'example)
-	 *		->options_logical($context->acctgtaccounts_options())
-	 *
-	 * @return array taccounts as hierarchy array
-	 */
-	function acctgtaccounts_options_hierarchy(array $constraints = null, $indenter = null, $accountslabel = null, $blanklabel = null, $blankkey = null)
-	{
-		$indenter !== null or $indenter = ' &mdash; ';
-		$accountslabel !== null or $accountslabel = \app\Lang::term('Accounts');
-		$blanklabel !== null or $blanklabel = '- '.\app\Lang::term('no parent').' -';
-		$blankkey !== null or $blankkey = '';
-
-		$options = array
-			(
-				$blankkey => $blanklabel,
-				$accountslabel => null,
-			);
-
-		$taccounts = static::acctgtaccounts(null, null, 0, null, $constraints);
-
-		foreach ($taccounts as $taccount)
-		{
-			$options[$taccount['id']] = \str_repeat($indenter, $taccount['depth'] + 1).$taccount['title'];
-		}
-
-		return $options;
+			($page, $limit, $offset, $depth = null, $constraints);
 	}
 
 	/**
@@ -159,21 +124,62 @@ trait Trait_AcctgContext
 			array $constraints = null
 		)
 	{
-		$subtreekey = 'subtaccounts';
+		$taccounts = static::acctgtaccounts($page, $limit, $offset, $depth, $constraints);
+		$types = static::acctgtypes(null, null);
+		$tree = \app\Arr::hierarchy_from(\app\Arr::tablemap($types, 'id'));
+		$refs = \app\Arr::refs_from($tree, 'id', 'subentries');
+		$acctrefs = [];
 
-		$entries = \app\AcctgTAccountLib::tree_hierarchy
-			(
-				$page, $limit, $offset, $depth,
-				$constraints,
-				$subtreekey # keys for where to store subentries
-			);
-
-		foreach ($entries as &$taccount)
+		foreach ($refs as &$taccounttype)
 		{
-			$this->recusively_embed_taccount_handlers($taccount, $subtreekey);
+			$taccounttype['entrytype'] = 'taccount-type';
 		}
 
-		return $entries;
+		foreach ($taccounts as &$taccount)
+		{
+			$taccount['subentries'] = [];
+			$acctrefs[$taccount['id']] = &$taccount;
+		}
+
+		$displayed_types = [];
+		foreach ($taccounts as &$taccount)
+		{
+			$taccount['entrytype'] = 'taccount';
+
+			if ($taccount['parent'] === null)
+			{
+				// show all referenced types
+				$type_entry = $refs[$taccount['type']];
+				while ($type_entry !== null)
+				{
+					$displayed_types[] = $type_entry['id'];
+					if ($type_entry['parent'] !== null)
+					{
+						$type_entry = $refs[$type_entry['parent']];
+					}
+					else # no parent
+					{
+						$type_entry = null;
+					}
+				}
+
+				isset($refs[$taccount['type']]['taccounts']) or $refs[$taccount['type']]['taccounts'] = [];
+				$refs[$taccount['type']]['taccounts'][$taccount['id']] = &$taccount;
+			}
+			else # parent !== null
+			{
+				$acctrefs[$taccount['parent']]['subentries'][] = $taccount;
+			}
+		}
+
+		$displayed_types = \array_unique($displayed_types);
+
+		foreach ($taccounts as &$taccount)
+		{
+			$this->recusively_embed_taccount_handlers($taccount, 'subentries');
+		}
+
+		return $tree;
 	}
 
 	/**
@@ -208,10 +214,9 @@ trait Trait_AcctgContext
 	/**
 	 * @return array
 	 */
-	function acctgtypesmap()
+	function acctgjournal($journal_id)
 	{
-		$types = \app\AcctgTAccountTypeLib::entries(null, null);
-		return \app\Arr::tablemap($types, 'id');
+		return \app\AcctgJournalLib::entry($journal_id);
 	}
 
 	/**
@@ -315,6 +320,7 @@ trait Trait_AcctgContext
 		)
 	{
 		$constraints['transaction'] = $transaction_id;
+		$order['type'] = 'desc';
 
 		$operations = \app\AcctgTransactionOperationLib::entries
 			(
@@ -328,11 +334,282 @@ trait Trait_AcctgContext
 	/**
 	 * @return array
 	 */
-	function acctgtaccount($id)
+	function acctgtransactionlog($constraints = null)
 	{
-		$taccount = \app\AcctgTAccountLib::entry($id);
-		$this->embed_taccount_handlers($taccount);
-		return $taccount;
+		return \app\AcctgTransactionLib::entries
+			(
+				null, null, 0,
+				[
+					'entry.timestamp' => 'desc'
+				],
+				$constraints
+			);
+	}
+
+	// ------------------------------------------------------------------------
+	// Form Helpers
+
+	/**
+	 * @return array supporter report interval
+	 */
+	function acctg_supporter_reportintervals()
+	{
+		return \app\CFS::config('mjolnir/types/acctg')['report']['intervals'];
+	}
+
+	/**
+	 * @return array supporter report breakdowns
+	 */
+	function acctg_supporter_reportbreakdowns()
+	{
+		return \app\CFS::config('mjolnir/types/acctg')['report']['breakdowns'];
+	}
+
+	/**
+	 * @return array taccount types as optgroup array
+	 */
+	function acctgtypes_options_hierarchy(array $constraints = null, $indenter = null, $typeslabel = null)
+	{
+		$indenter !== null or $indenter = ' &mdash; ';
+		$typeslabel !== null or $typeslabel = \app\Lang::term('TAccount Types:');
+
+		$options = array
+			(
+				$typeslabel => null,
+			);
+
+		$types = static::acctgtypes(null, null, 0, null, $constraints);
+
+		foreach ($types as $type)
+		{
+			$title = \str_repeat($indenter, $type['depth'] + 1).$type['title'];
+
+			if ($type['usable'])
+			{
+				$options[$type['id']] = $title;
+			}
+			else # logical type
+			{
+				$options[$title] = null;
+			}
+		}
+
+		return $options;
+	}
+
+	/**
+	 * Used for splitting multiple option sets
+	 *
+	 * @return string options devider string
+	 */
+	protected function options_devider()
+	{
+		return \str_repeat(' -',32);
+	}
+
+	/**
+	 * This method is designed to be used in conjuction with
+	 * HTMLFormField_Select objects,
+	 *
+	 * eg.
+	 *
+	 *	$form->select('Example Select', 'example)
+	 *		->options_logical($context->acctgtaccounts_options_liefhierarchy())
+	 *
+	 * @return array taccounts as liefhierarchy array
+	 */
+	function acctgtaccounts_options_liefs(array $types = null, array $constraints = null, $indenter = null, $accountslabel = null, $blanklabel = null, $blankkey = null)
+	{
+		$indenter !== null or $indenter = ' &mdash; ';
+		$accountslabel !== null or $accountslabel = \app\Lang::term('TAccounts:');
+
+		if ($blanklabel !== false && $blankkey !== false)
+		{
+			$blanklabel !== null or $blanklabel = '[ '.\app\Lang::term('no account').' ]';
+			$blankkey !== null or $blankkey = '';
+
+			$options = array
+				(
+					$blankkey => $blanklabel,
+					$this->options_devider() => null,
+					$accountslabel => null,
+				);
+		}
+		else # don't show blank option
+		{
+			$options = array
+				(
+					$accountslabel => null,
+				);
+		}
+
+		if ($types !== null)
+		{
+			$constraints['entry.type'] = [ 'IN' => $this->acctg_parsetypeconstraints($types) ];
+		}
+
+		$taccounts = static::acctgtaccounts(null, null, 0, null, $constraints);
+		$types = static::acctgtypes(null, null);
+		$tree = \app\Arr::hierarchy_from(\app\Arr::tablemap($types, 'id'));
+		$refs = \app\Arr::refs_from($tree, 'id', 'subentries');
+
+		$displayed_types = [];
+		$type_options = [];
+
+		foreach ($taccounts as $taccount)
+		{
+			// show all referenced types
+			$type_entry = $refs[$taccount['type']];
+
+			while ($type_entry !== null)
+			{
+				$displayed_types[] = $type_entry['id'];
+				if ($type_entry['parent'] !== null)
+				{
+					$type_entry = $refs[$type_entry['parent']];
+				}
+				else # no parent
+				{
+					$type_entry = null;
+				}
+			}
+
+			isset($type_options[$taccount['type']]) or $type_options[$taccount['type']] = [];
+			$option_title = ' &nbsp; '.\str_repeat($indenter, $refs[$taccount['type']]['depth'] + $taccount['depth'] + 2).$taccount['title'];
+			$type_options[$taccount['type']][$taccount['id']] = $option_title;
+		}
+
+		$displayed_types = \array_unique($displayed_types);
+
+		$options = \app\Arr::process_hierarchy
+			(
+				$tree,
+				function (&$result, $entry) use ($type_options, $displayed_types, $indenter)
+				{
+					if ( ! \in_array($entry['id'], $displayed_types))
+					{
+						return; # skip rendering
+					}
+
+					$option_title = ' &nbsp; '.\str_repeat($indenter, $entry['depth'] + 1).$entry['title'];
+					$result[$option_title] = null;
+					if (isset($type_options[$entry['id']]))
+					{
+						foreach ($type_options[$entry['id']] as $key => $option)
+						{
+							$result[$key] = $option;
+						}
+					}
+				},
+				null, # default subentry key
+				$options
+			);
+
+		return $options;
+	}
+
+	/**
+	 * This method is designed to be used in conjuction with
+	 * HTMLFormField_Select objects.
+	 *
+	 * Unlike the liefhierarchy equivalent using this method will make all
+	 * accounts selectable. The method is used in cases such as assigning a
+	 * parent taccount on creation.
+	 *
+	 * eg.
+	 *
+	 *	$form->select('Example Select', 'example)
+	 *		->options_logical($context->acctgtaccounts_options())
+	 *
+	 * @return array taccounts as hierarchy array
+	 */
+	function acctgtaccounts_options_hierarchy(array $types = null, array $constraints = null, $indenter = null, $accountslabel = null, $blanklabel = null, $blankkey = null)
+	{
+		$indenter !== null or $indenter = ' &mdash; ';
+		$accountslabel !== null or $accountslabel = \app\Lang::term('TAccounts:');
+
+		if ($blanklabel !== false && $blankkey !== false)
+		{
+			$blanklabel !== null or $blanklabel = '[ '.\app\Lang::term('no account').' ]';
+			$blankkey !== null or $blankkey = '';
+
+			$options = array
+				(
+					$blankkey => $blanklabel,
+					$this->options_devider() => null,
+					$accountslabel => null,
+				);
+		}
+		else # don't show blank option
+		{
+			$options = array
+				(
+					$accountslabel => null,
+				);
+		}
+
+		if ($types !== null)
+		{
+			$constraints['entry.type'] = [ 'IN' => $this->acctg_parsetypeconstraints($types) ];
+		}
+
+		$taccounts = static::acctgtaccounts(null, null, 0, null, $constraints);
+		$types = static::acctgtypes(null, null);
+		$tree = \app\Arr::hierarchy_from(\app\Arr::tablemap($types, 'id'));
+		$refs = \app\Arr::refs_from($tree, 'id', 'subentries');
+
+		$displayed_types = [];
+		$type_options = [];
+
+		foreach ($taccounts as $taccount)
+		{
+			// show all referenced types
+			$type_entry = $refs[$taccount['type']];
+			while ($type_entry !== null)
+			{
+				$displayed_types[] = $type_entry['id'];
+				if ($type_entry['parent'] !== null)
+				{
+					$type_entry = $refs[$type_entry['parent']];
+				}
+				else # no parent
+				{
+					$type_entry = null;
+				}
+			}
+
+			$option_title = ' &nbsp; '.\str_repeat($indenter, $refs[$taccount['type']]['depth'] + $taccount['depth'] + 2).$taccount['title'];
+			isset($type_options[$taccount['type']]) or $type_options[$taccount['type']] = [];
+			$type_options[$taccount['type']][$taccount['id']] = $option_title;
+		}
+
+		$displayed_types = \array_unique($displayed_types);
+
+		$options = \app\Arr::process_hierarchy
+			(
+				$tree,
+				function (&$result, $entry) use ($type_options, $displayed_types, $indenter)
+				{
+					if ( ! \in_array($entry['id'], $displayed_types))
+					{
+						return; # skip rendering
+					}
+
+					$option_title = ' &nbsp; '.\str_repeat($indenter, $entry['depth'] + 1).$entry['title'];
+					$result[$option_title] = null;
+					if (isset($type_options[$entry['id']]))
+					{
+						foreach ($type_options[$entry['id']] as $key => $option)
+						{
+							$result[$key] = $option;
+						}
+					}
+				},
+				null, # default subentry key
+				$options
+			);
+
+		return $options;
 	}
 
 	// ------------------------------------------------------------------------
@@ -412,9 +689,11 @@ trait Trait_AcctgContext
 	 */
 	protected function acctg_taccount_action($entry, $action)
 	{
+		$rmap = $this->acctgroutemap();
+
 		return \app\URL::href
 			(
-				'acctg-taccount.public',
+				$rmap['acctg-taccount.public'],
 				[
 					'action' => $action,
 					'id' => $entry['id']
@@ -433,6 +712,8 @@ trait Trait_AcctgContext
 	 */
 	protected function acctg_taccount_can($entry, $action, $context = null, $attributes = null, $user_role = null)
 	{
+		$rmap = $this->acctgroutemap();
+
 		if (\is_string($action))
 		{
 			$action  = array
@@ -444,7 +725,7 @@ trait Trait_AcctgContext
 
 		return \app\Access::can
 			(
-				'acctg-taccount.public',
+				$rmap['acctg-taccount.public'],
 				$action,
 				$context,
 				$attributes,
@@ -460,9 +741,11 @@ trait Trait_AcctgContext
 	 */
 	protected function acctg_journal_action($entry, $action)
 	{
+		$rmap = $this->acctgroutemap();
+
 		return \app\URL::href
 			(
-				'acctg-journal.public',
+				$rmap['acctg-journal.public'],
 				[
 					'action' => $action,
 					'id' => $entry['id']
@@ -481,6 +764,8 @@ trait Trait_AcctgContext
 	 */
 	protected function acctg_journal_can($entry, $action, $context = null, $attributes = null, $user_role = null)
 	{
+		$rmap = $this->acctgroutemap();
+
 		if (\is_string($action))
 		{
 			$action  = array
@@ -492,7 +777,7 @@ trait Trait_AcctgContext
 
 		return \app\Access::can
 			(
-				'acctg-journal.public',
+				$rmap['acctg-journal.public'],
 				$action,
 				$context,
 				$attributes,
@@ -508,9 +793,11 @@ trait Trait_AcctgContext
 	 */
 	protected function acctg_transaction_action($entry, $action)
 	{
+		$rmap = $this->acctgroutemap();
+
 		return \app\URL::href
 			(
-				'acctg-transaction.public',
+				$rmap['acctg-transaction.public'],
 				[
 					'action' => $action,
 					'id' => $entry['id']
@@ -529,6 +816,8 @@ trait Trait_AcctgContext
 	 */
 	protected function acctg_transaction_can($entry, $action, $context = null, $attributes = null, $user_role = null)
 	{
+		$rmap = $this->acctgroutemap();
+
 		if (\is_string($action))
 		{
 			$action  = array
@@ -540,12 +829,33 @@ trait Trait_AcctgContext
 
 		return \app\Access::can
 			(
-				'acctg-transaction.public',
+				$rmap['acctg-transaction.public'],
 				$action,
 				$context,
 				$attributes,
 				$user_role
 			);
+	}
+
+	// ------------------------------------------------------------------------
+	// Helpers
+
+	/**
+	 * @return array complete list of allowed types
+	 */
+	protected function acctg_parsetypeconstraints(array $mastertypes)
+	{
+		$inferred_types = [];
+		foreach ($mastertypes as $type)
+		{
+			$inferred_types = \app\Arr::merge
+				(
+					$inferred_types,
+					\app\AcctgTAccountTypeLib::inferred_types($type)
+				);
+		}
+
+		return $inferred_types;
 	}
 
 } # trait

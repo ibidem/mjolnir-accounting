@@ -14,7 +14,7 @@ class AcctgTAccountTypeCollection extends \app\MarionetteCollection
 	 */
 	static function config()
 	{
-		return \app\AcctgTypeModel::config();
+		return \app\AcctgTAccountTypeModel::config();
 	}
 
 } # class
