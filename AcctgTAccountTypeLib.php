@@ -209,6 +209,21 @@ class AcctgTAccountTypeLib
 	/**
 	 * @return array
 	 */
+	static function inferred_types_slugarray(array $types)
+	{
+		$inferred = [];
+		foreach ($types as $type)
+		{
+			$type_id = static::find_entry(['slugid' => $type])['id'];
+			$inferred = \app\Arr::merge($inferred, static::inferred_types($type_id));
+		}
+
+		return \array_unique($inferred);
+	}
+
+	/**
+	 * @return array
+	 */
 	static function inferred_types($type)
 	{
 		$tabledata = static::statement
