@@ -33,11 +33,11 @@
 
 	<thead class="acctg-journal-head">
 		<tr>
-			<th colspan="2">Date</th>
-			<th>#id</th>
+			<th style="width: 1%" colspan="2">Date</th>
+			<th style="width: 1%; white-space: nowrap">#id</th>
 			<th>Accounts &amp; Description</th>
-			<th>Debit</th>
-			<th>Credit</th>
+			<th style="width: 1%; white-space: nowrap">Debit</th>
+			<th style="width: 1%; white-space: nowrap">Credit</th>
 			<th>Notes</th>
 			<th>&nbsp;</th>
 		</tr>
@@ -55,7 +55,7 @@
 				<? $last_year = $year ?>
 				<tbody>
 					<tr>
-						<td colspan="2"><?= $year ?></td>
+						<td colspan="9"><?= $year ?></td>
 					</tr>
 				</tbody>
 			<? endif; ?>
@@ -85,7 +85,7 @@
 												&nbsp;
 											<? endif; ?>
 										</td>
-										<td>
+										<td class="acctg-journal-table--id">
 											<a href="<?= $transaction['action'](null) ?>"><?= \sprintf('%010s', $transaction['id']) ?></a>
 										</td>
 									<? else: # not first row ?>
@@ -100,8 +100,8 @@
 												<a href="<?= $taccount['action'](null) ?>"><?= $taccount['title'] ?></a>
 											</div>
 										</td>
-										<td><?= \app\Currency::format($operation['amount_value'], $operation['amount_type']) ?></td>
-										<td>&nbsp;</td>
+										<td class="acctg-journal-table--debit"><?= \app\Currency::format($operation['amount_value'], $operation['amount_type']) ?></td>
+										<td class="acctg-journal-table--credit">&nbsp;</td>
 									<? else: # credit ?>
 										<td class="acctg-journal-table--credit-acct">
 											<? # guarantee correct alignment; alignment has meaning ?>
@@ -110,8 +110,8 @@
 												<a href="<?= $taccount['action'](null) ?>"><?= $taccount['title'] ?></a>
 											</div>
 										</td>
-										<td>&nbsp;</td>
-										<td><?= \app\Currency::format($operation['amount_value'], $operation['amount_type']) ?></td>
+										<td class="acctg-journal-table--debit">&nbsp;</td>
+										<td class="acctg-journal-table--credit"><?= \app\Currency::format($operation['amount_value'], $operation['amount_type']) ?></td>
 									<? endif; ?>
 									<td class="acctg-journal-table--operation-note">
 										<?= $operation['note'] ?>

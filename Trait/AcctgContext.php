@@ -694,10 +694,14 @@ trait Trait_AcctgContext
 		return \app\URL::href
 			(
 				$rmap['acctg-taccount.public'],
-				[
-					'action' => $action,
-					'id' => $entry['id']
-				]
+				\app\Arr::merge
+				(
+					[
+						'action' => $action,
+						'id' => $entry['id']
+					],
+					$this->acctg_routing_context_information()
+				)
 			);
 	}
 
@@ -716,10 +720,13 @@ trait Trait_AcctgContext
 
 		if (\is_string($action))
 		{
-			$action  = array
+			$action  = \app\Arr::merge
 				(
-					'action' => $action,
-					'id' => $entry['id']
+					[
+						'action' => $action,
+						'id' => $entry['id']
+					],
+					$this->acctg_routing_context_information()
 				);
 		}
 
@@ -746,10 +753,14 @@ trait Trait_AcctgContext
 		return \app\URL::href
 			(
 				$rmap['acctg-journal.public'],
-				[
-					'action' => $action,
-					'id' => $entry['id']
-				]
+				\app\Arr::merge
+				(
+					[
+						'action' => $action,
+						'id' => $entry['id']
+					],
+					$this->acctg_routing_context_information()
+				)
 			);
 	}
 
@@ -768,10 +779,13 @@ trait Trait_AcctgContext
 
 		if (\is_string($action))
 		{
-			$action  = array
+			$action  = \app\Arr::merge
 				(
-					'action' => $action,
-					'id' => $entry['id']
+					[
+						'action' => $action,
+						'id' => $entry['id']
+					],
+					$this->acctg_routing_context_information()
 				);
 		}
 
@@ -798,10 +812,14 @@ trait Trait_AcctgContext
 		return \app\URL::href
 			(
 				$rmap['acctg-transaction.public'],
-				[
-					'action' => $action,
-					'id' => $entry['id']
-				]
+				\app\Arr::merge
+				(
+					[
+						'action' => $action,
+						'id' => $entry['id']
+					],
+					$this->acctg_routing_context_information()
+				)
 			);
 	}
 
@@ -820,10 +838,13 @@ trait Trait_AcctgContext
 
 		if (\is_string($action))
 		{
-			$action  = array
+			$action  = \app\Arr::merge
 				(
-					'action' => $action,
-					'id' => $entry['id']
+					[
+						'action' => $action,
+						'id' => $entry['id']
+					],
+					$this->acctg_routing_context_information()
 				);
 		}
 
@@ -856,6 +877,20 @@ trait Trait_AcctgContext
 		}
 
 		return $inferred_types;
+	}
+
+	// ------------------------------------------------------------------------
+	// Hooks
+
+	/**
+	 * Hook for easily injecting context information. For non-static
+	 * information simply overwrite the methods themselves.
+	 *
+	 * @return array
+	 */
+	protected function acctg_routing_context_information()
+	{
+		return [];
 	}
 
 } # trait
