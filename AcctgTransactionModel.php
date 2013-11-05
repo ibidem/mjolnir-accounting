@@ -20,6 +20,16 @@ class AcctgTransactionModel extends \app\MarionetteModel
 	function parse(array $input)
 	{
 		isset($input['group']) or $input['group'] = null;
+
+		if (isset($input['date']))
+		{
+			$input['date'] = \date_create($input['date'])->format('Y-m-d');
+		}
+		else # no date passed
+		{
+			$input['date'] = null;
+		}
+
 		return parent::parse($input);
 	}
 

@@ -138,16 +138,16 @@
 					),
 				\app\AcctgTransactionLockLib::table() => array
 					(
-						'transaction' => [\app\AcctgTransactionLib::table(), 'RESTRICT', 'CASCADE'],
+						'transaction' => [\app\AcctgTransactionLib::table(), 'CASCADE', 'CASCADE'],
 					),
 				\app\AcctgTransactionOperationLib::table() => array
 					(
-						'transaction' => [\app\AcctgTransactionLib::table(), 'RESTRICT', 'CASCADE'],
-						'taccount' => [\app\AcctgTAccountLib::table(), 'RESTRICT', 'CASCADE'],
+						'transaction' => [\app\AcctgTransactionLib::table(), 'CASCADE', 'CASCADE'],
+						'taccount' => [\app\AcctgTAccountLib::table(), 'CASCADE', 'CASCADE'],
 					),
 				\app\AcctgSettingsLib::table() => array
 					(
-						'taccount' => [\app\AcctgTAccountLib::table(), 'RESTRICT', 'CASCADE'],
+						'taccount' => [\app\AcctgTAccountLib::table(), 'CASCADE', 'CASCADE'],
 					),
 			),
 
