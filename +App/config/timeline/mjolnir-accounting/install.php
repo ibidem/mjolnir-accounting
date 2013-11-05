@@ -72,7 +72,7 @@
 						`id`          :key_primary,
 						`group`       :key_foreign                       comment "Accounting group.",
 						`journal`     :key_foreign                       comment "Journal transaction belongs to.",
-						`method`      :identifier DEFAULT "manual"       comment "Method by which the entry was created. Only used in journal maintenance and entry migrations.",
+						`method`      :identifier DEFAULT "anonymous"    comment "Method by which the entry was created. Only used in journal maintenance and entry migrations.",
 						`user`        :key_foreign                       comment "User responsible for the creation of the journal.",
 						`description` :block                             comment "Comments on the transaction.",
 						`date`        :datetime_required                 comment "Date assigned to transaction; user selected, as in classical accounting journal terms.",
