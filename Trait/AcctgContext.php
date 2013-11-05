@@ -37,6 +37,15 @@ trait Trait_AcctgContext
 		return $taccount;
 	}
 
+	/**
+	 * @return string
+	 */
+	function acctgmethod_translation($method)
+	{
+		$methods = \app\CFS::config('mjolnir/types/acctg')['transaction-method'];
+		return $methods[$method];
+	}
+
 	// ------------------------------------------------------------------------
 	// Internal
 

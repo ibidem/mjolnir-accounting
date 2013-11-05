@@ -127,7 +127,18 @@
 								<td colspan="4">&nbsp;</td>
 							</tr>
 							<tr class="acctg-journal-table--delimiter-row">
-								<td colspan="8">&nbsp;</td>
+								<td colspan="9">
+									&nbsp;
+									<? if ($transaction['method'] === 'manual'): ?>
+										<a href="<?= $transaction['action']('erase') ?>">
+											Delete
+										</a>
+									<? else: # non-manual ?>
+										<small><i class="icon-lock"></i> Protected</small>
+										&mdash;
+										Owned by <?= $context->acctgmethod_translation($transaction['method']) ?>
+									<? endif; ?>
+								</td>
 							</tr>
 						</tbody>
 					<? endforeach; ?>
@@ -137,7 +148,7 @@
 	<? else: # empty years ?>
 		<tbody class="acctg-journal-table--no-entries">
 			<tr>
-				<td colspan="6">
+				<td colspan="9">
 					<em>No entries available.</em>
 				</td>
 			</tr>
