@@ -9,6 +9,7 @@
 			(
 				'id' => 'number',
 				'group' => 'number',
+				'method' => 'string',
 			// journal in which the transaction is logged into
 				'journal' => array
 					(
