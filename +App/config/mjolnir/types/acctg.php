@@ -19,6 +19,7 @@
 		'transaction-method' => array
 			(
 				'manual' => 'Manual',
+				'anonymous' => 'Unknown Entity'
 			),
 
 		'report' => array
