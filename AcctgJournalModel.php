@@ -20,6 +20,8 @@ class AcctgJournalModel extends \app\MarionetteModel
 	function parse(array $input)
 	{
 		isset($input['group']) or $input['group'] = null;
+		isset($input['protected']) or $input['protected'] = false;
+		isset($input['slugid']) or $input['slugid'] = null;
 		return parent::parse($input);
 	}
 
