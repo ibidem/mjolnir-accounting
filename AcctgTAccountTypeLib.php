@@ -286,7 +286,14 @@ class AcctgTAccountTypeLib
 	 */
 	static function typefortaccount($taccount, $group = null)
 	{
-		return \app\AcctgTAccountLib::find_entry(['id' => $taccount, 'group' => $group])['type'];
+		return \app\AcctgTAccountLib::find_entry
+			(
+				[
+					'id' => $taccount,
+					'group' => $group
+				]
+			)
+			['type'];
 	}
 
 	/**
