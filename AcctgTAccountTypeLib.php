@@ -284,22 +284,15 @@ class AcctgTAccountTypeLib
 	/**
 	 * @return int
 	 */
-	static function typefortaccount($taccount, $group = null)
+	static function typefortaccount($taccount)
 	{
-		return \app\AcctgTAccountLib::find_entry
-			(
-				[
-					'id' => $taccount,
-					'group' => $group
-				]
-			)
-			['type'];
+		return \app\AcctgTAccountLib::find_entry(['id' => $taccount])['type'];
 	}
 
 	/**
 	 * @return array type slugids for a given taccount
 	 */
-	static function alltypesfortaccount($taccount, $group = null)
+	static function alltypesfortaccount($taccount)
 	{
 		$entries = static::statement
 			(
@@ -315,7 +308,7 @@ class AcctgTAccountTypeLib
 					   AND entry.rgt >= target.rgt
 				'
 			)
-			->num(':target', static::typefortaccount($taccount, $group))
+			->num(':target', static::typefortaccount($taccount))
 			->run()
 			->fetch_all();
 

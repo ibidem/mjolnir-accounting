@@ -19,6 +19,7 @@ class AcctgSettingsLib
 			'nums' => array
 				(
 					'id',
+					'group',
 					'taccount'
 				),
 			'strs' => array
@@ -49,6 +50,25 @@ class AcctgSettingsLib
 	{
 		// @todo proper validation
 		return \app\Validator::instance($input);
+	}
+
+	/**
+	 * ...
+	 */
+	static function process($input)
+	{
+		$fields = static::fieldlist();
+
+		static::inserter
+			(
+				$input,
+				$fields['strs'],
+				$fields['bools'],
+				\array_diff($fields['nums'], ['id'])
+			)
+			->run();
+
+		static::clear_cache();
 	}
 
 	/**

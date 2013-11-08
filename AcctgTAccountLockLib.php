@@ -33,4 +33,34 @@ class AcctgTAccountLockLib
 				),
 		);
 
+	// ------------------------------------------------------------------------
+	// Factory interface
+
+	/**
+	 * @return \app\Validator
+	 */
+	static function check($input, $context = null)
+	{
+		return \app\Validator::instance($input);
+	}
+
+	/**
+	 * ...
+	 */
+	static function process($input)
+	{
+		$fields = static::fieldlist();
+		
+		static::inserter
+			(
+				$input,
+				$fields['strs'],
+				$fields['bools'],
+				\array_diff($fields['nums'], ['id'])
+			)
+			->run();
+
+		static::clear_cache();
+	}
+
 } # class

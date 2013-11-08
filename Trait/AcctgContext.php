@@ -532,10 +532,21 @@ trait Trait_AcctgContext
 	 *
 	 * @return array taccounts as hierarchy array
 	 */
-	function acctgtaccounts_options_hierarchy(array $types = null, array $constraints = null, $indenter = null, $accountslabel = null, $blanklabel = null, $blankkey = null)
+	function acctgtaccounts_options_hierarchy
+		(
+			array $types = null,
+			array $constraints = null,
+			$indenter = null,
+			$accountslabel = null,
+			$blanklabel = null, # pass false to disable
+			$blankkey = null    # pass false to disable
+		)
 	{
 		$indenter !== null or $indenter = ' &mdash; ';
+
 		$accountslabel !== null or $accountslabel = \app\Lang::term('TAccounts:');
+
+
 
 		if ($blanklabel !== false && $blankkey !== false)
 		{
