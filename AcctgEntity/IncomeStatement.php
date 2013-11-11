@@ -84,8 +84,6 @@ class AcctgEntity_IncomeStatement extends \app\Instantiatable
 				->run()
 				->fetch_all();
 
-			\var_dump($sql_totals);
-
 			foreach ($sql_totals as &$entry)
 			{
 				$entry['type'] = \app\AcctgTAccountTypeLib::typefortaccount($entry['taccount']);
@@ -98,6 +96,34 @@ class AcctgEntity_IncomeStatement extends \app\Instantiatable
 		$this->report['data'] = $totals;
 
 		return $this;
+	}
+
+	/**
+	 * @return int
+	 */
+	function total()
+	{
+		$data = $this->report();
+
+		$incometypes = \app\AcctgTAccountTypeLib::inferred_types(\app\AcctgTAccountTypeLib::typebyname('revenue'));
+		$expensetypes = \app\AcctgTAccountTypeLib::inferred_types(\app\AcctgTAccountTypeLib::typebyname('revenue'));
+
+		$total_cents = 0;
+
+		foreach ($data as $taccount_id => $total)
+		{
+			$taccount = \app\AcctgTAccountLib::entry($taccount_id);
+			if (\in_array($taccount['type'], $incometypes))
+			{
+				$total_cents += \intval($data[$taccount_id] * 100) * (-1);
+			}
+			if (\in_array($taccount['type'], $expensetypes))
+			{
+				$total_cents -= \intval($data[$taccount_id] * 100);
+			}
+		}
+
+		return $total_cents / 100;
 	}
 
 } # class

@@ -88,11 +88,9 @@ class AcctgReport_IncomeStatement extends \app\AcctgReport
 				]
 			);
 
-		\var_dump($income_taccounts, $totals);
+		$refs_income_accounts = \app\Arr::refs_from($income_taccounts, 'id', 'subentries');
 
-		$refs_asset_taccounts = \app\Arr::refs_from($income_taccounts, 'id', 'subentries');
-
-		foreach ($refs_asset_taccounts as &$taccount)
+		foreach ($refs_income_accounts as &$taccount)
 		{
 			foreach ($keys as $key)
 			{
