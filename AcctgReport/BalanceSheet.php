@@ -35,12 +35,11 @@ class AcctgReport_BalanceSheet extends \app\AcctgReport
 	 */
 	function run()
 	{
-		// set generation time
-		$this->set('timestamp', \time());
-
 		// create root category
 		$this->reportview = \app\AcctgReportCategory::instance();
 		$this->reportview->nototals();
+
+		$acctg_input = ['breakdown' => []];
 
 		// Parse report settings
 		// ---------------------
@@ -55,14 +54,26 @@ class AcctgReport_BalanceSheet extends \app\AcctgReport
 		#
 
 		// we need to adjust the breakdown to reflect this
-		foreach ($breakdown as &$conf)
+		foreach ($breakdown as $key => &$conf)
 		{
 			if ($conf['interval'] !== null)
 			{
 				$conf['interval']['from'] = \app\AcctgTransactionLib::startoftime();
 				$conf['title'] = $conf['interval']['to'];
+				$conf['interval']['to'] = \date_create($conf['interval']['to']);
 			}
+
+			$acctg_input['breakdown'][$key] = $conf['interval'];
 		}
+
+		// Calculate Report Data
+		// ---------------------
+
+		$entity = \app\AcctgEntity_BalanceSheet::instance($acctg_input, $this->get('group', null));
+		$result = $entity->run()->report();
+
+		// set generation time
+		$this->set('timestamp', $result['timestamp']);
 
 		// Add report headers
 		// ------------------
@@ -73,51 +84,10 @@ class AcctgReport_BalanceSheet extends \app\AcctgReport
 			$this->headers[] = $segment['title'];
 		}
 
-		// Retrieve entries
-		// ----------------
-
-		foreach ($breakdown as $key => $conf)
-		{
-			if ($conf['interval'] === null)
-			{
-				continue;
-			}
-
-			$sql_totals = \app\SQL::prepare
-				(
-					__METHOD__.'account-totals',
-					'
-						SELECT op.taccount,
-							   SUM(op.amount_value * op.type) total
-
-						  FROM `'.\app\AcctgTransactionOperationLib::table().'` op
-
-						  JOIN `'.\app\AcctgTransactionLib::table().'` tr
-							ON tr.id = op.transaction
-
-						 WHERE tr.group <=> :group
-						   AND tr.date BETWEEN :start_date AND :end_date
-
-						 GROUP BY op.taccount
-					'
-				)
-				->date(':start_date', $conf['interval']['from'])
-				->date(':end_date', $conf['interval']['to'])
-				->num(':group', $this->get('group', null))
-				->run()
-				->fetch_all();
-
-			foreach ($sql_totals as $entry)
-			{
-				$entry['type'] = \app\AcctgTAccountTypeLib::typefortaccount($entry['taccount']);
-				$entry['total'] = $entry['total'] * \app\AcctgTAccountTypeLib::sign($entry['type']) * \app\AcctgTAccountLib::sign($entry['taccount']);
-			}
-
-			$totals[$key] = \app\Arr::gatherkeys($sql_totals, 'taccount', 'total');
-		}
-
 		// Resolve Assets
 		// --------------
+
+		$totals = $result['data'];
 
 		$assetstype = \app\AcctgTAccountTypeLib::typebyname('assets');
 		$asset_taccounts = \app\AcctgTAccountLib::tree_hierarchy
@@ -202,8 +172,6 @@ class AcctgReport_BalanceSheet extends \app\AcctgReport
 
 		// Resolve Capital
 		// ---------------
-
-
 
 		#
 		# Capital is calculated as total from Statement of Owner's Equity,

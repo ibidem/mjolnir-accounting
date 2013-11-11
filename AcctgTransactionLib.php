@@ -37,11 +37,11 @@ class AcctgTransactionLib
 
 		if ($result !== null)
 		{
-			return $result;
+			return \date_create($result);
 		}
 		else # result === null
 		{
-			return \date('Y-m-d');
+			return \date_create();
 		}
 	}
 
