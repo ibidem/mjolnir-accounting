@@ -295,4 +295,133 @@ class AcctgTAccountLib
 		}
 	}
 
+	// ------------------------------------------------------------------------
+	// Setup Helpers
+
+	/**
+	 * "Primitive" TAccount install.
+	 */
+	static function install_taccounts($group, $taccounts)
+	{
+		$typemap = \app\AcctgTAccountTypeLib::typemap();
+
+		foreach ($taccounts as $type => $typetaccounts)
+		{
+			foreach ($typetaccounts as $key => $taccount)
+			{
+				if (\is_array($taccount))
+				{
+					static::setup_add_taccount($typemap[$type], $key, null, $taccount, $group);
+				}
+				else # no sub accounts
+				{
+					static::setup_add_taccount($typemap[$type], $taccount, null, null, $group);
+				}
+			}
+		}
+
+		static::install_special_taccounts($group);
+	}
+
+	/**
+	 * ...
+	 */
+	protected static function install_special_taccounts($group)
+	{
+		\app\AcctgTAccountLib::tree_push
+			(
+				[
+					'type' => \app\AcctgTAccountTypeLib::typebyname('revenue'),
+					'title' => 'General Revenue',
+					'sign' => +1,
+					'parent' => null,
+					'group' => $group
+				]
+			);
+
+		$revenue_taccount = \app\AcctgTAccountLib::last_inserted_id();
+
+		\app\AcctgSettingsLib::push
+			(
+				[
+					'group' => $group,
+					'taccount' => $revenue_taccount,
+					'slugid' => 'invoice:revenue.acct'
+				]
+			);
+
+		\app\AcctgTAccountLockLib::push
+			(
+				[
+					'taccount' => $revenue_taccount,
+					'issuer' => \app\AcctgSettingsLib::taccountlock_issuer(),
+					'cause' => \app\AcctgSettingsLib::taccountlock_cause(),
+				]
+			);
+
+		\app\AcctgTAccountLib::tree_push
+			(
+				[
+					'type' => \app\AcctgTAccountTypeLib::typebyname('current-assets'),
+					'title' => 'Accounts Recievables',
+					'sign' => +1,
+					'parent' => null,
+					'group' => $group
+				]
+			);
+
+		$recievables_taccount = \app\AcctgTAccountLib::last_inserted_id();
+
+		\app\AcctgSettingsLib::push
+			(
+				[
+					'group' => $group,
+					'taccount' => $recievables_taccount,
+					'slugid' => 'invoice:recievables.acct'
+				]
+			);
+
+		\app\AcctgTAccountLockLib::push
+			(
+				[
+					'taccount' => $revenue_taccount,
+					'issuer' => \app\AcctgSettingsLib::taccountlock_issuer(),
+					'cause' => \app\AcctgSettingsLib::taccountlock_cause(),
+				]
+			);
+	}
+
+	/**
+	 * ...
+	 */
+	protected static function setup_add_taccount($type, $title, $parent = null, $subaccounts = null, $group = null)
+	{
+		$input = array
+			(
+				'title' => $title,
+				'sign' => +1,
+				'type' => $type,
+				'parent' => $parent,
+				'group' => $group
+			);
+
+		\app\AcctgTAccountLib::tree_push($input);
+		$id = \app\AcctgTAccountLib::last_inserted_id();
+
+		if ( ! empty($subaccounts))
+		{
+			foreach ($subaccounts as $key => $taccount)
+			{
+				if (\is_array($taccount))
+				{
+					$this->add_taccount($type, $key, $id, $taccount);
+				}
+				else # no sub accounts
+				{
+					$this->add_taccount($type, $taccount, $id, null);
+				}
+			}
+		}
+	}
+
 } # class
