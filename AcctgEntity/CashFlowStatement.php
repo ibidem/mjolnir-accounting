@@ -55,7 +55,311 @@ class AcctgEntity_CashFlowStatement extends \app\Instantiatable
 		// set generation time
 		$report['timestamp'] = \date_create();
 
-		// @todo
+		// Operating Activities
+		// --------------------
+
+		// generate previous year based on pivot point
+		$last_years_conf = ['breakdown' => []];
+		foreach ($conf['breakdown'] as $key => $entry)
+		{
+			$new_entry = ['from' => clone $entry['from'], 'to' => clone $entry['to']];
+			$new_entry['from']->modify('-1 year');
+			$new_entry['to']->modify('-1 year');
+			$last_years_conf['breakdown'][] = $new_entry;
+		}
+
+		// last years totals
+		$entity = \app\AcctgEntity_BalanceSheet::instance($conf, $this->group);
+		$last_years_balance = $entity->run()->report();
+
+		// this years totals
+		$entity = \app\AcctgEntity_BalanceSheet::instance($conf, $this->group);
+		$this_years_balance = $entity->run()->report();
+
+		// income statement
+		$entity = \app\AcctgEntity_IncomeStatement::instance($conf, $this->group);
+		$income_statement = $entity->run()->totals();
+
+		$cashflow_statement = [];
+
+		$taccounts_table = \app\AcctgTAccountLib::table();
+		$depreciation_types = \implode(',', \app\AcctgTAccountTypeLib::inferred_types_by_name('depreciation'));
+
+		foreach ($this_years_balance['data'] as $cat => $entry)
+		{
+			// We start at net income/loss
+			// ---------------------------
+
+			$cashflow_statement[$cat] = array
+				(
+
+					'incdec' => [],                   # increase/decrese raw information
+				// "Operating Activities"
+					'net' => $income_statement[$cat], # net income/loss
+					'depreciation' => 0.00,           # depreciation adjustments
+					'reconciliation' => [],           # adjustments to reconcile net income
+				// "Investing Activities"
+					'investing' => array
+						(
+							'inflows' => [],
+							'outflows' => [],
+						),
+				// "Financing Activities"
+					'financing' => array
+						(
+							'inflows' => [],
+							'outflows' => [],
+						),
+				);
+
+			// We create a increase/decrease column
+			// ------------------------------------
+
+			$accts = \array_unique
+				(
+					\array_merge
+						(
+							\array_keys($last_years_balance['data'][$cat]),
+							\array_keys($this_years_balance['data'][$cat])
+						)
+				);
+
+			foreach ($accts as $acct)
+			{
+				isset($last_years_balance['data'][$acct]) or $last_years_balance['data'][$acct] = 0;
+				isset($this_years_balance['data'][$acct]) or $this_years_balance['data'][$acct] = 0;
+				$cashflow_statement[$cat]['incdec'][$acct] = $this_years_balance['data'][$acct] - $last_years_balance['data'][$acct];
+			}
+
+			// Add depreciation accounts
+			// -------------------------
+
+			$depereciation_accts = \app\SQL::prepare
+				(
+					__METHOD__,
+					"
+						SELECT entry.*
+	                      FROM `$taccounts_table` entry
+
+						 WHERE entry.group <=> :group
+						   AND entry.type IN ($depreciation_types)
+					"
+				)
+				->num(':group', $this->group)
+				->run()
+				->fetch_all();
+
+			// calculate total
+			$depreciation_adjust_cents = 0;
+			foreach ($depereciation_accts as $entry)
+			{
+				if (isset($cashflow_statement[$cat]['incdec'][$entry['id']]))
+				{
+					$depreciation_adjust_cents += \intval($entry['total'] * 100);
+				}
+			}
+
+			// add from net income depereciation since it didnt change cash
+			$cashflow_statement[$cat]['depreciation'] = $depreciation_adjust_cents / 100;
+
+			// Add Current Assets & Current Liabilities Changes
+			// ------------------------------------------------
+
+			#
+			# The following uses the window method, as expressed by the following diagram
+			#
+			#                            Increase    Decrease
+			#            Current Assets     -          +
+			#       Current Liabilities     +          -
+			#
+
+			// get all current assets accounts
+			$current_assets_types = \app\AcctgTAccountTypeLib::inferred_types_by_name('current-assets');
+			$current_liabilities_types = \app\AcctgTAccountTypeLib::inferred_types_by_name('current-liabilities');
+
+			foreach ($cashflow_statement[$cat]['incdec'] as  $acct => $val)
+			{
+				$taccount = \app\AcctgTAccountLib::entry($acct);
+
+				if (\in_array($taccount['type'], $current_assets_types))
+				{
+					if ($val > 0)
+					{
+						$adjustment = array
+							(
+								'type' => 'increase',
+								'taccount' => $acct,
+								'value' => -1 * $val
+							);
+
+						$cashflow_statement[$cat]['reconciliation'][] = $adjustment;
+					}
+					else if ($val < 0)
+					{
+						$adjustment = array
+							(
+								'type' => 'decrese',
+								'taccount' => $acct,
+								'value' => $val
+							);
+
+						$cashflow_statement[$cat]['reconciliation'][] = $adjustment;
+					}
+					# else: ignore 0
+				}
+				else if (\in_array($taccount['type'], $current_liabilities_types))
+				{
+					if ($val > 0)
+					{
+						$adjustment = array
+							(
+								'type' => 'increase',
+								'taccount' => $acct,
+								'value' => $val
+							);
+
+						$cashflow_statement[$cat]['reconciliation'][] = $adjustment;
+					}
+					else if ($val < 0)
+					{
+						$adjustment = array
+							(
+								'type' => 'decrese',
+								'taccount' => $acct,
+								'value' => -1 * $val
+							);
+
+						$cashflow_statement[$cat]['reconciliation'][] = $adjustment;
+					}
+					# else: ignore 0.00
+				}
+			}
+
+			// Investing Activities
+			// --------------------
+
+			// get all current assets accounts
+			$longterm_assets_types = \app\AcctgTAccountTypeLib::inferred_types_by_name('long-term-assets');
+
+			foreach ($cashflow_statement[$cat]['incdec'] as  $acct => $val)
+			{
+				$taccount = \app\AcctgTAccountLib::entry($acct);
+
+				if (\in_array($taccount['type'], $longterm_assets_types))
+				{
+					if ($val < 0)
+					{
+						$adjustment = array
+							(
+								'taccount' => $acct,
+								'value' => $val,
+							);
+
+						$cashflow_statement[$cat]['investing']['inflows'][] = $adjustment;
+					}
+					else if ($val > 0)
+					{
+						$adjustment = array
+							(
+								'taccount' => $acct,
+								'value' => $val,
+							);
+
+						$cashflow_statement[$cat]['investing']['outflows'][] = $adjustment;
+					}
+					# else: ignore 0.00
+				}
+			}
+
+			// Financing Activities
+			// --------------------
+
+			// get all current assets accounts
+			$withdrawl_types = \app\AcctgTAccountTypeLib::inferred_types_by_name('withdraws');
+			$ownerequity_types = \app\AcctgTAccountTypeLib::inferred_types_by_name('owner-equity');
+			$investment_types = \array_diff($ownerequity_types, $withdrawl_types);
+
+			foreach ($cashflow_statement[$cat]['incdec'] as  $acct => $val)
+			{
+				$taccount = \app\AcctgTAccountLib::entry($acct);
+
+				if (\in_array($taccount['type'], $withdrawl_types))
+				{
+					$adjustment = array
+						(
+							'taccount' => $acct,
+							'value' => $val,
+						);
+
+					$cashflow_statement[$cat]['financing']['outflows'][] = $adjustment;
+				}
+				else if (\in_array($taccount['type'], $investment_types))
+				{
+					$adjustment = array
+						(
+							'taccount' => $acct,
+							'value' => $val,
+						);
+
+					$cashflow_statement[$cat]['financing']['inflows'][] = $adjustment;
+				}
+			}
+
+			// perform check with cash; cash must be equal to the total of all 3 activities
+			// combined; any difference is perceived as an operational error and the statement
+			// will be promptly rejected though an NotApplicable exception
+
+			// perform cash total
+			$cash_total_cents = 0;
+			$cash_types = \app\AcctgTAccountTypeLib::inferred_types_by_name('cash');
+			foreach ($cashflow_statement[$cat]['incdec'] as  $acct => $val)
+			{
+				$taccount = \app\AcctgTAccountLib::entry($acct);
+
+				if (\in_array($taccount['type'], $cash_types))
+				{
+					$cash_total_cents = \intval($val * 100);
+				}
+			}
+
+			// perform operations total
+			$operations_total_cents = \intval($cashflow_statement[$cat]['net'] * 100);
+			$operations_total_cents += \intval($cashflow_statement[$cat]['depreciation'] * 100);
+			foreach ($cashflow_statement[$cat]['reconciliation'] as $adjustment)
+			{
+				$operations_total_cents += \intval($adjustment['value'] * 100);
+			}
+
+			// perform investing total
+			$investing_total_cents = 0;
+			foreach ($cashflow_statement[$cat]['investing']['inflows'] as $adjustment)
+			{
+				$investing_total_cents += \intval($adjustment['value'] * 100);
+			}
+			foreach ($cashflow_statement[$cat]['investing']['outflows'] as $adjustment)
+			{
+				$investing_total_cents += \intval($adjustment['value'] * 100);
+			}
+
+			// perform financing total
+			$financing_total_cents = 0;
+			foreach ($cashflow_statement[$cat]['financing']['inflows'] as $adjustment)
+			{
+				$investing_total_cents += \intval($adjustment['value'] * 100);
+			}
+			foreach ($cashflow_statement[$cat]['financing']['outflows'] as $adjustment)
+			{
+				$investing_total_cents += \intval($adjustment['value'] * 100);
+			}
+
+			$check_sum = $operations_total_cents + $investing_total_cents + $financing_total_cents;
+			if ($cash_total_cents != $check_sum)
+			{
+				throw new \app\Exception_NotApplicable('Correctness checks rejected the Statement, for being incorrect. This may be do to an error in the system or your accounts. Please contact an administrator or technical support to help resolve the issue.');
+			}
+		}
+
+		$this->report['data'] = $cashflow_statement;
 
 		return $this;
 	}

@@ -93,7 +93,27 @@ class AcctgEntity_IncomeStatement extends \app\Instantiatable
 			$totals[$key] = \app\Arr::gatherkeys($sql_totals, 'taccount', 'total');
 		}
 
-		$this->report['data'] = $totals;
+		$incometypes = \app\AcctgTAccountTypeLib::inferred_types(\app\AcctgTAccountTypeLib::typebyname('revenue'));
+		$expensetypes = \app\AcctgTAccountTypeLib::inferred_types(\app\AcctgTAccountTypeLib::typebyname('expenses'));
+
+		$accepted_types = \array_merge($incometypes, $expensetypes);
+
+		$filtered_totals = [];
+
+		foreach ($totals as $key => $taccounts)
+		{
+			$filtered_totals[$key] = [];
+			foreach ($taccounts as $taccount_id => $total)
+			{
+				$taccount = \app\AcctgTAccountLib::entry($taccount_id);
+				if (\in_array($taccount['type'], $accepted_types))
+				{
+					$filtered_totals[$key][$taccount_id] = $total;
+				}
+			}
+		}
+
+		$this->report['data'] = $filtered_totals;
 
 		return $this;
 	}
@@ -101,29 +121,35 @@ class AcctgEntity_IncomeStatement extends \app\Instantiatable
 	/**
 	 * @return int
 	 */
-	function total()
+	function totals()
 	{
-		$data = $this->report();
+		$report = $this->report();
 
 		$incometypes = \app\AcctgTAccountTypeLib::inferred_types(\app\AcctgTAccountTypeLib::typebyname('revenue'));
-		$expensetypes = \app\AcctgTAccountTypeLib::inferred_types(\app\AcctgTAccountTypeLib::typebyname('revenue'));
+		$expensetypes = \app\AcctgTAccountTypeLib::inferred_types(\app\AcctgTAccountTypeLib::typebyname('expenses'));
 
-		$total_cents = 0;
+		$totals = [];
 
-		foreach ($data as $taccount_id => $total)
+		foreach ($report['data'] as $cat => $accts)
 		{
-			$taccount = \app\AcctgTAccountLib::entry($taccount_id);
-			if (\in_array($taccount['type'], $incometypes))
+			$total_cents = 0;
+			foreach ($accts as $taccount_id => $total)
 			{
-				$total_cents += \intval($data[$taccount_id] * 100) * (-1);
+				$taccount = \app\AcctgTAccountLib::entry($taccount_id);
+				if (\in_array($taccount['type'], $incometypes))
+				{
+					$total_cents += \intval($total * 100) * (-1);
+				}
+				if (\in_array($taccount['type'], $expensetypes))
+				{
+					$total_cents -= \intval($total * 100);
+				}
 			}
-			if (\in_array($taccount['type'], $expensetypes))
-			{
-				$total_cents -= \intval($data[$taccount_id] * 100);
-			}
+
+			$totals[$cat] = $total_cents / 100;
 		}
 
-		return $total_cents / 100;
+		return $totals;
 	}
 
 } # class

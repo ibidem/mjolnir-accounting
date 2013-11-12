@@ -36,14 +36,14 @@
 					'usable' => true,
 				),
 
-				'long-term-assets' => array
-					(
-						'slugid' => 'long-term-assets',
-						'title' => 'Long-Term Assets',
-						'parent' => 'current-assets',
-						'sign' => +1,
-						'usable' => true,
-					),
+			'long-term-assets' => array
+				(
+					'slugid' => 'long-term-assets',
+					'title' => 'Long-Term Assets',
+					'parent' => 'assets',
+					'sign' => +1,
+					'usable' => true,
+				),
 
 			'depreciation' => array
 				(
