@@ -20,7 +20,7 @@ class AcctgReportCategory extends \app\AcctgReportEntry
 	}
 
 	/**
-	 * @return AcctgReportEntryInterface
+	 * @return AcctgReportCategoryInterface
 	 */
 	function newcategory($title)
 	{

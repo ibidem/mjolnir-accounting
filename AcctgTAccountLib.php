@@ -12,11 +12,19 @@ class AcctgTAccountLib
 	use \app\Trait_MarionetteLib;
 	use \app\Trait_NestedSetModel;
 
+	/** @var array cache */
+	protected static $signs = [];
+
 	/**
 	 * @return int +1/-1
 	 */
 	static function sign($taccount)
 	{
+		if (isset(static::$signs[$taccount]))
+		{
+			return static::$signs[$taccount];
+		}
+
 		$signature_trail = static::statement
 			(
 				__METHOD__,
@@ -35,7 +43,22 @@ class AcctgTAccountLib
 			->run()
 			->fetch_all();
 
-		return \app\Arr::intmul($signature_trail, 'sig');
+		return static::$signs[$taccount] = \app\Arr::intmul($signature_trail, 'sig');
+	}
+
+	/**
+	 * Given a taccount -> value association will return the sum, tacking into
+	 * account the sign of the account
+	 */
+	static function sum(array $taccount_values)
+	{
+		$sum = 0;
+		foreach ($taccount_values as $taccount => $value)
+		{
+			$sum += \intval($value * 100) * static::sign($taccount);
+		}
+
+		return $sum;
 	}
 
 	// ------------------------------------------------------------------------
@@ -77,10 +100,11 @@ class AcctgTAccountLib
 
 		$prt = static::tree_parentkey();
 		isset($input[$prt]) or $input[$prt] = null;
+		isset($input['slugid']) or $inpit['slugid'] = null;
 	}
 
 	/**
-	 * @return mjolnir\types\Validator
+	 * @return \mjolnir\types\Validator
 	 */
 	static function tree_check(array $input, $context = null)
 	{
@@ -296,6 +320,21 @@ class AcctgTAccountLib
 	}
 
 	// ------------------------------------------------------------------------
+	// Helpers
+
+	/**
+	 * Given an accounting group, returns the map of slugid -> id for all
+	 * taccounts which have a slug assigned.
+	 *
+	 * @return array
+	 */
+	static function namedacctsmap($group = null)
+	{
+		$accts = static::entries(null, null, 0, null, [ 'group' => $group, 'slugid' => ['not' => null] ]);
+		return \app\Arr::gatherkeys($accts, 'slugid', 'id');
+	}
+
+	// ------------------------------------------------------------------------
 	// Setup Helpers
 
 	/**
@@ -326,7 +365,7 @@ class AcctgTAccountLib
 	/**
 	 * ...
 	 */
-	protected static function install_special_taccounts($group)
+	static function install_special_taccounts($group)
 	{
 		\app\AcctgTAccountLib::tree_push
 			(
@@ -335,7 +374,8 @@ class AcctgTAccountLib
 					'title' => 'General Revenue',
 					'sign' => +1,
 					'parent' => null,
-					'group' => $group
+					'group' => $group,
+					'slugid' => 'revenue',
 				]
 			);
 
@@ -366,7 +406,8 @@ class AcctgTAccountLib
 					'title' => 'Accounts Recievables',
 					'sign' => +1,
 					'parent' => null,
-					'group' => $group
+					'group' => $group,
+					'slugid' => 'accts-recievables',
 				]
 			);
 
@@ -414,11 +455,11 @@ class AcctgTAccountLib
 			{
 				if (\is_array($taccount))
 				{
-					$this->add_taccount($type, $key, $id, $taccount);
+					static::setup_add_taccount($type, $key, $id, $taccount);
 				}
 				else # no sub accounts
 				{
-					$this->add_taccount($type, $taccount, $id, null);
+					static::setup_add_taccount($type, $taccount, $id, null);
 				}
 			}
 		}

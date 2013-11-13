@@ -36,6 +36,7 @@
 				\app\AcctgTAccountLib::table() =>
 					'
 						`id`        :key_primary,
+						`slugid`    :slugid                              comment "Unique codename for referencing in code.",
 						`group`     :key_foreign                         comment "Accounting group.",
 						`type`	    :key_foreign                         comment "Account type; used to determine place in formulas.",
 						`title`     :title,

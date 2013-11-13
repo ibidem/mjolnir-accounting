@@ -64,10 +64,13 @@ class AcctgReport_CashFlowStatement extends \app\AcctgReport
 		// ---------------------
 
 		$entity = \app\AcctgEntity_CashFlowStatement::instance($acctg_input, $this->get('group', null));
-		$result = $entity->run()->report();
+		$report = $entity->run()->report();
+		$reportdata = &$report['data'];
+
+//		\var_dump($report['data']['operating']['reconciliation']); die;
 
 		// set generation time
-		$this->set('timestamp', $result['timestamp']);
+		$this->set('timestamp', $report['timestamp']);
 
 		// Add report headers
 		// ------------------
@@ -78,12 +81,115 @@ class AcctgReport_CashFlowStatement extends \app\AcctgReport
 			$this->headers[] = $segment['title'];
 		}
 
-		// main categories
+
+		// Operating Activities
+		// --------------------
+
 		$operating_activities = $this->reportview->newcategory('Operating Activities');
+
+		// add net income
+		$operating_activities->newdataentry
+			(
+				[
+					'title' => 'Net Earnings',
+					'value' => $reportdata['operating']['net_earnings']
+				]
+			);
+
+		// add depreciation
+		$operating_activities->newdataentry
+			(
+				[
+					'title' => 'Depreciation',
+					'value' => $reportdata['operating']['depreciation']
+				]
+			);
+
+		// add adjustments
+		foreach ($reportdata['operating']['reconciliation'] as $adjustment)
+		{
+			$taccount = \app\AcctgTAccountLib::entry($adjustment['taccount']);
+
+			$operating_activities->newdataentry
+				(
+					[
+						'title' => ($adjustment['type'] == 'decrese' ? 'Decrease in ' : 'Increase in ') . $taccount['title'],
+						'value' => $adjustment['value']
+					]
+				);
+		}
+
+		// Investment Activities
+		// ---------------------
+
 		$investment_activities = $this->reportview->newcategory('Investment Activities');
+
+		$investment_inflows = $investment_activities->newcategory('Inflows');
+
+		foreach ($reportdata['investing']['inflows'] as $adjustment)
+		{
+			$taccount = \app\AcctgTAccountLib::entry($adjustment['taccount']);
+
+			$investment_inflows->newdataentry
+				(
+					[
+						'title' => $taccount['title'],
+						'value' => $adjustment['value']
+					]
+				);
+		}
+
+		$investment_outflows = $investment_activities->newcategory('Outflows');
+
+		foreach ($reportdata['investing']['outflows'] as $adjustment)
+		{
+			$taccount = \app\AcctgTAccountLib::entry($adjustment['taccount']);
+
+			$investment_outflows->newdataentry
+				(
+					[
+						'title' => $taccount['title'],
+						'value' => $adjustment['value']
+					]
+				);
+		}
+
+		// Investment Activities
+		// ---------------------
+
 		$financing_activities = $this->reportview->newcategory('Financing Activities');
 
+		$financing_inflows = $financing_activities->newcategory('Inflows');
 
+		foreach ($reportdata['financing']['inflows'] as $adjustment)
+		{
+			$taccount = \app\AcctgTAccountLib::entry($adjustment['taccount']);
+
+			$financing_inflows->newdataentry
+				(
+					[
+						'title' => $taccount['title'],
+						'value' => $adjustment['value']
+					]
+				);
+		}
+
+		$financing_outflows = $financing_activities->newcategory('Outflows');
+
+		foreach ($reportdata['financing']['inflows'] as $adjustment)
+		{
+			$taccount = \app\AcctgTAccountLib::entry($adjustment['taccount']);
+
+			$financing_outflows->newdataentry
+				(
+					[
+						'title' => $taccount['title'],
+						'value' => $adjustment['value']
+					]
+				);
+		}
+
+		\var_dump($report['data']);
 
 		return $this;
 	}

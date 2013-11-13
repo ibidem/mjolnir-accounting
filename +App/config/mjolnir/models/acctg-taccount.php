@@ -8,6 +8,7 @@
 		'fields' => array
 			(
 				'id' => 'number',
+				'slugid' => 'string',
 				'group' => 'number',
 				'type' => 'number',
 				'title' => 'string',

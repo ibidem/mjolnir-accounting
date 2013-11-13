@@ -52,7 +52,11 @@
 	<? if ( ! empty($records)): ?>
 		<? foreach ($records as $year => $months): ?>
 			<? if ($year !== $last_year): ?>
-				<? $last_year = $year ?>
+				<?
+					$last_year = $year;
+					$last_month = null;
+					$last_day = null;
+				?>
 				<tbody>
 					<tr>
 						<td colspan="9"><?= $year ?></td>
@@ -71,7 +75,10 @@
 										<? $first_operation = false; ?>
 										<td class="acctg-journal-table--transaction-month">
 											<? if ($month !== $last_month): ?>
-												<? $last_month = $month ?>
+												<?
+													$last_month = $month;
+													$last_day = null;
+												?>
 												<?= $monthname[$month] ?>
 											<? else: # unchanged ?>
 												&nbsp;
