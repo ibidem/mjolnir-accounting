@@ -197,12 +197,17 @@ trait Trait_AcctgContext
 	protected function recusively_embed_taccount_handlers(&$taccount, $subtreekey)
 	{
 		$this->embed_taccount_handlers($taccount);
+		$taccount['balance'] = 0.00;
 		if ( ! empty($taccount[$subtreekey]))
 		{
 			foreach ($taccount[$subtreekey] as &$subtaccount)
 			{
 				$this->recusively_embed_taccount_handlers($subtaccount, $subtreekey);
 			}
+		}
+		else # leaf
+		{
+			$taccount['balance'] = \app\AcctgTAccountLib::balance_for($taccount['id']);
 		}
 	}
 

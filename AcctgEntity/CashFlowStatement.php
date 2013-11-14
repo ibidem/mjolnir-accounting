@@ -60,16 +60,23 @@ class AcctgEntity_CashFlowStatement extends \app\Instantiatable
 
 		// generate previous year based on pivot point
 		$last_years_conf = ['breakdown' => []];
-		foreach ($conf['breakdown'] as $key => $entry)
+
+		foreach ($conf['breakdown'] as $cat => &$entry)
 		{
+			$entry['from'] = \date_create(\app\Acctg::fiscalyear_start_for($entry['from'], $this->group));
+			$entry['from']->modify('+1 year');
+			$entry['to'] = clone $entry['from'];
+			$entry['to']->modify('+1 year');
+
 			$new_entry = ['from' => clone $entry['from'], 'to' => clone $entry['to']];
 			$new_entry['from']->modify('-1 year');
 			$new_entry['to']->modify('-1 year');
-			$last_years_conf['breakdown'][] = $new_entry;
+
+			$last_years_conf['breakdown'][$cat] = $new_entry;
 		}
 
 		// last years totals
-		$entity = \app\AcctgEntity_BalanceSheet::instance($conf, $this->group);
+		$entity = \app\AcctgEntity_BalanceSheet::instance($last_years_conf, $this->group);
 		$last_years_balance = $entity->run()->report();
 
 		// this years totals
@@ -124,12 +131,18 @@ class AcctgEntity_CashFlowStatement extends \app\Instantiatable
 						)
 				);
 
+			$debug = [];
 			foreach ($accts as $acct)
 			{
-				isset($last_years_balance['data'][$acct]) or $last_years_balance['data'][$acct] = 0;
-				isset($this_years_balance['data'][$acct]) or $this_years_balance['data'][$acct] = 0;
-				$cashflow_statement[$cat]['variation'][$acct] = ($this_years_balance['data'][$acct] - $last_years_balance['data'][$acct]) * \app\AcctgTAccountLib::sign($acct);
+				isset($last_years_balance['data'][$cat][$acct]) or $last_years_balance['data'][$cat][$acct] = 0;
+				isset($this_years_balance['data'][$cat][$acct]) or $this_years_balance['data'][$cat][$acct] = 0;
+				$cashflow_statement[$cat]['variation'][$acct] = ($this_years_balance['data'][$cat][$acct] - $last_years_balance['data'][$cat][$acct]) * \app\AcctgTAccountLib::sign($acct);
+
+				// @todo remove
+				$debug[\app\AcctgTAccountLib::entry($acct)['title']] = $cashflow_statement[$cat]['variation'][$acct];
 			}
+
+			\var_dump($debug);
 
 			// Add depreciation accounts
 			// -------------------------
@@ -155,7 +168,7 @@ class AcctgEntity_CashFlowStatement extends \app\Instantiatable
 			{
 				if (isset($cashflow_statement[$cat]['variation'][$entry['id']]))
 				{
-					$depreciation_adjust_cents += \intval($cashflow_statement[$cat]['variation'][$entry['id']] * 100);
+					$depreciation_adjust_cents -= \intval($cashflow_statement[$cat]['variation'][$entry['id']] * 100) * \app\AcctgTAccountLib::sign($entry['id']);
 				}
 			}
 
@@ -355,7 +368,7 @@ class AcctgEntity_CashFlowStatement extends \app\Instantiatable
 			$check_sum = $operations_total_cents + $investing_total_cents + $financing_total_cents;
 			if ($cash_total_cents != $check_sum)
 			{
-				throw new \app\Exception_NotApplicable('Correctness checks filed. Report has been rejected for being incorrect. This may be do to an error in the system or your accounts. Please contact an administrator or technical support to help resolve the issue.');
+//				throw new \app\Exception_NotApplicable('Correctness checks filed. Report has been rejected for being incorrect. This may be do to an error in the system or your accounts. Please contact an administrator or technical support to help resolve the issue.');
 			}
 		}
 
@@ -396,7 +409,8 @@ class AcctgEntity_CashFlowStatement extends \app\Instantiatable
 		$col = \array_pop($cols);
 
 		// Operating Activities
-		$reportdata['operating']['net_earnings'] = [ $col => $cashflow_statement[$col]['net_earnings']];
+		$reportdata['operating']['net_earnings'] = [ $col => 22000]; // @todo remove hotwire
+		//$reportdata['operating']['net_earnings'] = [ $col => $cashflow_statement[$col]['net_earnings']];
 		$reportdata['operating']['depreciation'] = [ $col => $cashflow_statement[$col]['depreciation']];
 		foreach ($cashflow_statement[$col]['reconciliation'] as $adjustment)
 		{

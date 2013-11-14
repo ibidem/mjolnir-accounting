@@ -296,7 +296,7 @@ abstract class AcctgReport extends \app\Instantiatable implements AcctgReportInt
 	/**
 	 * @return string
 	 */
-	protected function render_header()
+	function render_header()
 	{
 		$headerview = '<th class="acctg-report--placeholder">&nbsp;</th>';
 

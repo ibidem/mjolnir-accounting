@@ -73,13 +73,14 @@ class AcctgEntity_BalanceSheet extends \app\Instantiatable
 							ON tr.id = op.transaction
 
 						 WHERE tr.group <=> :group
-						   AND tr.date BETWEEN :start_date AND :end_date
+						   AND unix_timestamp(tr.date) >= unix_timestamp(:start_date)
+						   AND unix_timestamp(tr.date) < unix_timestamp(:end_date)
 
 						 GROUP BY op.taccount
 					'
 				)
-				->date(':start_date', $conf['from']->format('Y-m-d H:i:s'))
-				->date(':end_date', $conf['to']->format('Y-m-d H:i:s'))
+				->num(':start_date', $conf['from']->format('Y-m-d H:i:s'))
+				->num(':end_date', $conf['to']->format('Y-m-d H:i:s'))
 				->num(':group', $this->group)
 				->run()
 				->fetch_all();

@@ -19,7 +19,7 @@ class AcctgTAccountTypeLib
 	 */
 	static function sign($taccounttype)
 	{
-		$signature_trail = static::statement
+		$signature_trail = static::stash
 			(
 				__METHOD__,
 				'
@@ -33,6 +33,7 @@ class AcctgTAccountTypeLib
 					   AND entry.rgt >= type.rgt;
 				'
 			)
+			->key(__FUNCTION__.'__'.$taccounttype)
 			->num(':taccounttype', $taccounttype)
 			->run()
 			->fetch_all();

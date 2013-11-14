@@ -16,6 +16,94 @@ class AcctgTAccountLib
 	protected static $signs = [];
 
 	/**
+	 * @return string table
+	 */
+	static function typetable()
+	{
+		return \app\AcctgTAccountTypeLib::table();
+	}
+
+	/**
+	 * The absolute formula sign is generated on the basis of the right side of
+	 * the accounting equation being moved to the left and the entire formula
+	 * equaling 0. ie. A - L - OE + E - R = 0
+	 *
+	 * @return int +1 or -1
+	 */
+	static function absolute_sign($taccount_id, $absolute_formula_sign = false)
+	{
+		$taccount = static::entry($taccount_id);
+		$type_id = $taccount['type'];
+
+		// sign from parents and self
+		$signature_trail = static::stash
+			(
+				__METHOD__,
+				'
+					SELECT t.sign as sig
+					  FROM `'.static::table().'` t
+
+					  JOIN `'.static::table().'` taccount
+					    ON taccount.id = :taccount
+
+				     WHERE t.lft <= taccount.lft
+					   AND t.rgt >= taccount.rgt
+				'
+			)
+			->key(__FUNCTION__.'__'.$taccount_id)
+			->num(':taccount', $taccount_id)
+			->run()
+			->fetch_all();
+
+		$taccount_sign = \app\Arr::intmul($signature_trail, 'sig');
+
+		// sign from type
+		$type_signature_trail = static::stash
+			(
+				__METHOD__,
+				'
+					SELECT t.sign as sig
+					  FROM `'.static::typetable().'` t
+
+					  JOIN `'.static::typetable().'` type
+					    ON type.id = :type_id
+
+				     WHERE t.lft <= type.lft
+					   AND t.rgt >= type.rgt;
+				'
+			)
+			->key(__FUNCTION__.'__'.$type_id)
+			->num(':type_id', $type_id)
+			->run()
+			->fetch_all();
+
+		$type_sign = \app\Arr::intmul($type_signature_trail, 'sig');
+
+		if ($absolute_formula_sign)
+		{
+			$type = static::entry($type_id);
+
+			// get assets root
+			$assets_root = \app\AcctgTAccountTypeLib::find_entry(['slugid' => 'assets']);
+
+			if ($type['lft'] >= $assets_root['lft'] && $type['rgt'] <= $assets_root['rgt'])
+			{
+				$formula_sign = +1;
+			}
+			else # liabilities account
+			{
+				$formula_sign = -1;
+			}
+		}
+		else # ignore formula sign
+		{
+			$formula_sign = +1;
+		}
+
+		return $taccount_sign * $type_sign * $formula_sign;
+	}
+
+	/**
 	 * @return int +1/-1
 	 */
 	static function sign($taccount)
@@ -25,7 +113,7 @@ class AcctgTAccountLib
 			return static::$signs[$taccount];
 		}
 
-		$signature_trail = static::statement
+		$signature_trail = static::stash
 			(
 				__METHOD__,
 				'
@@ -39,6 +127,7 @@ class AcctgTAccountLib
 					   AND t.rgt >= taccount.rgt;
 				'
 			)
+			->key(__FUNCTION__.'__'.$taccount)
 			->num(':taccount', $taccount)
 			->run()
 			->fetch_all();
@@ -323,6 +412,25 @@ class AcctgTAccountLib
 	// Helpers
 
 	/**
+	 * @return int 0 for no error, or variation
+	 */
+	static function check_integrity($group = null)
+	{
+		$taccounts = static::entries(null, null, 0, null, ['group' => $group]);
+
+		$check_sum = 0;
+		foreach ($taccounts as &$taccount)
+		{
+			$taccount['direction'] = static::absolute_sign($taccount['id'], true);
+			$taccount['balance'] = static::balance_for($taccount['id']);
+
+			$check_sum += \intval($taccount['balance'] * 100) * $taccount['direction'];
+		}
+
+		return $check_sum / 100;
+	}
+
+	/**
 	 * Given an accounting group, returns the map of slugid -> id for all
 	 * taccounts which have a slug assigned.
 	 *
@@ -332,6 +440,29 @@ class AcctgTAccountLib
 	{
 		$accts = static::entries(null, null, 0, null, [ 'group' => $group, 'slugid' => ['not' => null] ]);
 		return \app\Arr::gatherkeys($accts, 'slugid', 'id');
+	}
+
+	/**
+	 * @return float
+	 */
+	static function balance_for($taccount_id)
+	{
+		return static::statement
+			(
+				__METHOD__,
+				'
+					SELECT SUM(op.amount_value * op.type)
+					  FROM `'.\app\AcctgTransactionOperationLib::table().'` op
+
+					  JOIN :table entry
+						ON op.taccount = entry.id
+
+					 WHERE entry.id = :taccount_id
+				'
+			)
+			->num(':taccount_id', $taccount_id)
+			->run()
+			->fetch_calc(0.00);
 	}
 
 	// ------------------------------------------------------------------------
