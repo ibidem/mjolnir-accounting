@@ -23,6 +23,138 @@ class AcctgTAccountLib
 		return \app\AcctgTAccountTypeLib::table();
 	}
 
+	/**
+	 * @return int
+	 */
+	static function rootsign($taccount)
+	{
+		$entries = static::statement
+			(
+				__METHOD__,
+				'
+					SELECT entry.sign
+					  FROM `'.static::table().'` entry
+
+					  JOIN `'.static::table().'` target
+						ON target.id = :target
+
+				     WHERE entry.lft <= target.lft
+					   AND entry.rgt >= target.rgt
+				'
+			)
+			->num(':target', $taccount)
+			->run()
+			->fetch_all();
+
+		return \app\Arr::intmul($entries, 'sign');
+	}
+
+	/**
+	 * @return int
+	 */
+	static function acctg_zerosum_sign($taccount)
+	{
+		$sign = +1;
+
+		if (\app\AcctgTAccountTypeLib::is_equity_acct($taccount))
+		{
+			$sign = -1;
+		}
+
+		$sign *= \app\AcctgTAccountTypeLib::rootsign(static::entry($taccount)['type']);
+		$sign *= \app\AcctgTAccountLib::rootsign($taccount);
+
+		return $sign;
+	}
+
+	/**
+	 * @return float
+	 */
+	static function acct_balance($taccount)
+	{
+		if (\app\AcctgTAccountTypeLib::is_equity_acct($taccount))
+		{
+			$sign_adjustment = -1;
+		}
+		else # assets account
+		{
+			$sign_adjustment = +1;
+		}
+
+		return (int) \app\SQL::prepare
+			(
+				__METHOD__,
+				'
+					SELECT SUM(op.amount_value * op.type)
+					  FROM `'.\app\AcctgTransactionOperationLib::table().'` op
+					 WHERE op.taccount = :taccount
+				'
+			)
+			->num(':taccount', $taccount)
+			->run()
+			->fetch_calc()
+			* $sign_adjustment;
+	}
+
+	/**
+	 * @return float
+	 */
+	static function acctgeq_balance($taccount)
+	{
+		if (\app\AcctgTAccountTypeLib::is_equity_acct($taccount))
+		{
+			$sign_adjustment = -1;
+		}
+		else # assets taccount
+		{
+			$sign_adjustment = +1;
+		}
+
+		echo "\nacctgeq_balance($taccount) -> $sign_adjustment\n";
+		$sign_adjustment *= \app\AcctgTAccountTypeLib::rootsign(static::entry($taccount)['type']);
+		echo "\nacctgeq_balance($taccount) -> $sign_adjustment\n";
+		$sign_adjustment *= \app\AcctgTAccountLib::rootsign($taccount);
+		echo "\nacctgeq_balance($taccount) -> $sign_adjustment\n";
+
+		return (int) \app\SQL::prepare
+			(
+				__METHOD__,
+				'
+					SELECT SUM(op.amount_value * op.type)
+					  FROM `'.\app\AcctgTransactionOperationLib::table().'` op
+					 WHERE op.taccount = :taccount
+				'
+			)
+			->num(':taccount', $taccount)
+			->run()
+			->fetch_calc()
+		* $sign_adjustment
+		;
+	}
+
+	/**
+	 * @return float
+	 */
+	static function checksum($group = null)
+	{
+		return (int) \app\SQL::prepare
+			(
+				__METHOD__,
+				'
+					SELECT SUM(op.amount_value * op.type * taccount.zerosum_sign)
+					  FROM `'.\app\AcctgTAccountLib::table().'` taccount
+
+					  JOIN `'.\app\AcctgTransactionOperationLib::table().'` op
+					    ON op.taccount = taccount.id
+
+					 WHERE taccount.group = :group
+				'
+			)
+			->num(':group', $group)
+			->run()
+			->fetch_calc();
+	}
+
 //	/**
 //	 * The absolute formula sign is generated on the basis of the right side of
 //	 * the accounting equation being moved to the left and the entire formula
@@ -231,14 +363,14 @@ class AcctgTAccountLib
 			);
 
 		$new_entry = \app\SQL::last_inserted_id();
-		$checksign = static::absolute_sign($new_entry, true);
+		$checksign = static::acctg_zerosum_sign($new_entry);
 
 		static::statement
 			(
 				__METHOD__,
 				'
 					UPDATE :table
-					   SET checksign = :checksign
+					   SET zerosum_sign = :checksign
 					 WHERE id = :new_entry
 				'
 			)
@@ -484,6 +616,24 @@ class AcctgTAccountLib
 //			* $debit_mod;
 //	}
 
+	/**
+	 * @return int TAccount id
+	 * @throws \app\Exception could not find taccount
+	 */
+	static function named($slugid)
+	{
+		$entry = static::find_entry(['slugid' => $slugid]);
+
+		if ($entry === null)
+		{
+			throw new \app\Exception("Could not find TAccount called [$slugid]");
+		}
+		else # found TAccount
+		{
+			return $entry['id'];
+		}
+	}
+
 	// ------------------------------------------------------------------------
 	// Setup Helpers
 
@@ -520,7 +670,7 @@ class AcctgTAccountLib
 		\app\AcctgTAccountLib::tree_push
 			(
 				[
-					'type' => \app\AcctgTAccountTypeLib::typebyname('revenue'),
+					'type' => \app\AcctgTAccountTypeLib::named('revenue'),
 					'title' => 'General Revenue',
 					'sign' => +1,
 					'parent' => null,
@@ -552,7 +702,7 @@ class AcctgTAccountLib
 		\app\AcctgTAccountLib::tree_push
 			(
 				[
-					'type' => \app\AcctgTAccountTypeLib::typebyname('current-assets'),
+					'type' => \app\AcctgTAccountTypeLib::named('current-assets'),
 					'title' => 'Accounts Recievables',
 					'sign' => +1,
 					'parent' => null,

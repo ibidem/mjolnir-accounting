@@ -41,9 +41,10 @@
 						`type`      :key_foreign                         comment "Account type; used to determine place in formulas.",
 						`title`     :title,
 						`sign`      tinyint DEFAULT +1                   comment "Account value sign; used in formulas. Contra accounts have -1, non-contra accounts have +1.",
-						`checksign` tinyint DEFAULT +1                   comment "Sign used to check system integrity; sum of balance of all accounts times checksign should be 0 at all times.",
 						`lft`       :nestedsetindex                      comment "Left position in Nested Set.",
 						`rgt`       :nestedsetindex                      comment "Right position in Nested Set.",
+
+						`zerosum_sign` tinyint DEFAULT +1                comment "Sign used to check system integrity; sum of balance of all accounts times checksign should be 0 at all times.",
 
 						PRIMARY KEY (id)
 					',

@@ -334,4 +334,60 @@ class AcctgTAccountTypeLib
 //		return \app\Arr::gather($entries, 'id');
 //	}
 
+	/**
+	 * @return int
+	 */
+	static function rootsign($type)
+	{
+		$entries = static::statement
+			(
+				__METHOD__,
+				'
+					SELECT entry.sign
+					  FROM `'.static::table().'` entry
+
+					  JOIN `'.static::table().'` target
+						ON target.id = :target
+
+				     WHERE entry.lft <= target.lft
+					   AND entry.rgt >= target.rgt
+				'
+			)
+			->num(':target', $type)
+			->run()
+			->fetch_all();
+
+		return \app\Arr::intmul($entries, 'sign');
+	}
+
+	/**
+	 * @return boolean
+	 */
+	static function is_equity_acct($taccount)
+	{
+		$equity = static::find_entry(['slugid' => 'equity']);
+		$entry = \app\AcctgTAccountLib::entry($taccount);
+		$taccount_type = static::entry($entry['type']);
+
+		return $taccount_type['lft'] >= $equity['lft'] && $taccount_type['rgt'] <= $equity['rgt'];
+	}
+
+	/**
+	 * @return int
+	 * @throws \app\Exception if no type is available
+	 */
+	static function named($slugid)
+	{
+		$entry = static::find_entry(['slugid' => $slugid]);
+
+		if ($entry === null)
+		{
+			throw new \app\Exception("Could not find any type called [$slugid]");
+		}
+		else # found type
+		{
+			return $entry['id'];
+		}
+	}
+
 } # class

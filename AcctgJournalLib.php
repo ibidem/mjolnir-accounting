@@ -33,11 +33,21 @@ class AcctgJournalLib
 	}
 
 	/**
-	 * @return int
+	 * @return int journal id
+	 * @throws \app\Exception if no journal is found
 	 */
-	static function namedjournal($slugid)
+	static function named($slugid)
 	{
-		return static::find_entry(['slugid' => $slugid])['id'];
+		$entry = static::find_entry(['slugid' => $slugid]);
+
+		if ($entry === null)
+		{
+			throw new \app\Exception("Could not find Journal called [$slugid]");
+		}
+		else # found journal
+		{
+			return $entry['id'];
+		}
 	}
 
 	/**
