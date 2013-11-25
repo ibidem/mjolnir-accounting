@@ -81,7 +81,7 @@ class AcctgTAccountLib
 
 		if ($absolute_formula_sign)
 		{
-			$type = static::entry($type_id);
+			$type = \app\AcctgTAccountTypeLib::entry($type_id);
 
 			// get assets root
 			$assets_root = \app\AcctgTAccountTypeLib::find_entry(['slugid' => 'assets']);
@@ -229,6 +229,22 @@ class AcctgTAccountLib
 				$input,
 				$fieldlist['strs'], $fieldlist['bools'], $fieldlist['nums']
 			);
+
+		$new_entry = \app\SQL::last_inserted_id();
+		$checksign = static::absolute_sign($new_entry, true);
+
+		static::statement
+			(
+				__METHOD__,
+				'
+					UPDATE :table
+					   SET checksign = :checksign
+					 WHERE id = :new_entry
+				'
+			)
+			->num(':checksign', $checksign)
+			->num(':new_entry', $new_entry)
+			->run();
 
 		// cleanup
 		static::clear_cache();
@@ -421,11 +437,15 @@ class AcctgTAccountLib
 		$check_sum = 0;
 		foreach ($taccounts as &$taccount)
 		{
-			$taccount['direction'] = static::absolute_sign($taccount['id'], true);
+			$taccount['checksign'] = static::absolute_sign($taccount['id'], true);
 			$taccount['balance'] = static::balance_for($taccount['id']);
 
-			$check_sum += \intval($taccount['balance'] * 100) * $taccount['direction'];
+			if ($taccount['balance'] != 0) \var_dump($taccount, static::absolute_sign($taccount['id'], false));
+
+			$check_sum += \intval($taccount['balance'] * 100) * $taccount['checksign'];
 		}
+
+		\var_dump($check_sum); die;
 
 		return $check_sum / 100;
 	}

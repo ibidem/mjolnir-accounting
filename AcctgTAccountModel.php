@@ -26,6 +26,7 @@ class AcctgTAccountModel extends \app\MarionetteModel
 		isset($input['rgt']) or $input['rgt'] = null;
 		isset($input['group']) or $input['group'] = null;
 		isset($input['slugid']) or $input['slugid'] = null;
+		isset($input['checksign']) or $input['checksing'] = 1;
 
 		if (\is_string($input['sign']))
 		{

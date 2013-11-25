@@ -131,18 +131,12 @@ class AcctgEntity_CashFlowStatement extends \app\Instantiatable
 						)
 				);
 
-			$debug = [];
 			foreach ($accts as $acct)
 			{
 				isset($last_years_balance['data'][$cat][$acct]) or $last_years_balance['data'][$cat][$acct] = 0;
 				isset($this_years_balance['data'][$cat][$acct]) or $this_years_balance['data'][$cat][$acct] = 0;
 				$cashflow_statement[$cat]['variation'][$acct] = ($this_years_balance['data'][$cat][$acct] - $last_years_balance['data'][$cat][$acct]) * \app\AcctgTAccountLib::sign($acct);
-
-				// @todo remove
-				$debug[\app\AcctgTAccountLib::entry($acct)['title']] = $cashflow_statement[$cat]['variation'][$acct];
 			}
-
-			\var_dump($debug);
 
 			// Add depreciation accounts
 			// -------------------------
@@ -409,8 +403,7 @@ class AcctgEntity_CashFlowStatement extends \app\Instantiatable
 		$col = \array_pop($cols);
 
 		// Operating Activities
-		$reportdata['operating']['net_earnings'] = [ $col => 22000]; // @todo remove hotwire
-		//$reportdata['operating']['net_earnings'] = [ $col => $cashflow_statement[$col]['net_earnings']];
+		$reportdata['operating']['net_earnings'] = [ $col => $cashflow_statement[$col]['net_earnings']];
 		$reportdata['operating']['depreciation'] = [ $col => $cashflow_statement[$col]['depreciation']];
 		foreach ($cashflow_statement[$col]['reconciliation'] as $adjustment)
 		{

@@ -119,7 +119,7 @@ class AcctgEntity_IncomeStatement extends \app\Instantiatable
 	}
 
 	/**
-	 * @return int
+	 * @return array
 	 */
 	function totals()
 	{
@@ -130,8 +130,6 @@ class AcctgEntity_IncomeStatement extends \app\Instantiatable
 
 		$totals = [];
 
-//		\var_dump($report['data']); die;
-
 		foreach ($report['data'] as $cat => $accts)
 		{
 			$total_cents = 0;
@@ -140,12 +138,10 @@ class AcctgEntity_IncomeStatement extends \app\Instantiatable
 				$taccount = \app\AcctgTAccountLib::entry($taccount_id);
 				if (\in_array($taccount['type'], $incometypes))
 				{
-					\var_dump(' + '.$total.' '.$taccount['title']);
 					$total_cents += \intval($total * 100) * (-1);
 				}
 				if (\in_array($taccount['type'], $expensetypes))
 				{
-					\var_dump(' - '.$total.' '.$taccount['title']);
 					$total_cents -= \intval($total * 100);
 				}
 			}
@@ -154,6 +150,22 @@ class AcctgEntity_IncomeStatement extends \app\Instantiatable
 		}
 
 		return $totals;
+	}
+
+	/**
+	 * @return float
+	 */
+	function total()
+	{
+		$totals = $this->totals();
+
+		$result = 0;
+		foreach ($totals as $total)
+		{
+			$result += \intval($total * 100);
+		}
+
+		return $result / 100;
 	}
 
 } # class
