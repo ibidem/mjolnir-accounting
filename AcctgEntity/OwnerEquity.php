@@ -15,11 +15,15 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 	/** @var array */
 	protected $group = null;
 
+	/** @var array */
+	protected $report = null;
+
 	/**
 	 * @return static
 	 */
 	static function instance(array $conf = null, $group = null)
 	{
+		/** @var AcctgEntity_OwnerEquity $i */
 		$i = parent::instance();
 
 		$i->conf = $conf;
@@ -51,6 +55,11 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 	{
 		$report = &$this->report;
 		$conf = &$this->conf;
+
+		foreach ($conf['breakdown'] as &$entry)
+		{
+			isset($entry['target']) or $entry['target'] = $entry['to'];
+		}
 
 		// set generation time
 		$report['timestamp'] = \date_create();
@@ -188,7 +197,7 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 					$this->group
 				);
 
-			$totals[$key] += \intval($income_statement->run()->total() * 100);
+			$totals[$key] += \intval($income_statement->run()->total() * 100) * (-1);
 
 			// Withdraws
 			// ---------

@@ -12,34 +12,52 @@ class AcctgTAccountTypeLib
 	use \app\Trait_MarionetteLib;
 	use \app\Trait_NestedSetModel;
 
-	/**
-	 * Roots are always considered positive as per their definition.
-	 *
-	 * @return int +1/-1
-	 */
-	static function sign($taccounttype)
-	{
-		$signature_trail = static::stash
-			(
-				__METHOD__,
-				'
-					SELECT entry.sign as sig
-					  FROM `'.static::table().'` entry
-
-					  JOIN `'.static::table().'` type
-					    ON type.id = :taccounttype
-
-				     WHERE entry.lft <= type.lft
-					   AND entry.rgt >= type.rgt;
-				'
-			)
-			->key(__FUNCTION__.'__'.$taccounttype)
-			->num(':taccounttype', $taccounttype)
-			->run()
-			->fetch_all();
-
-		return \app\Arr::intmul($signature_trail, 'sig');
-	}
+//	/**
+//	 * Roots are always considered positive as per their definition.
+//	 *
+//	 * @return int +1/-1
+//	 */
+//	static function sign($taccounttype)
+//	{
+//		$signature_trail = static::stash
+//			(
+//				__METHOD__,
+//				'
+//					SELECT entry.sign as sig
+//					  FROM `'.static::table().'` entry
+//
+//					  JOIN `'.static::table().'` type
+//					    ON type.id = :taccounttype
+//
+//				     WHERE entry.lft <= type.lft
+//					   AND entry.rgt >= type.rgt;
+//				'
+//			)
+//			->key(__FUNCTION__.'__'.$taccounttype)
+//			->num(':taccounttype', $taccounttype)
+//			->run()
+//			->fetch_all();
+//
+//		return \app\Arr::intmul($signature_trail, 'sig');
+//	}
+//
+//	static function taccount_debitmod($taccount_id)
+//	{
+//		$types = static::alltypesfortaccount($taccount_id);
+//
+//		if (\in_array('assets', $types))
+//		{
+//			$root_debit_mod = +1;
+//		}
+//		else # equity: debit decreases, credit increases
+//		{
+//			$root_debit_mod = -1;
+//		}
+//
+//		$type = \app\AcctgTAccountLib::entry($taccount_id)['type'];
+//
+//		return $root_debit_mod * static::sign($type);
+//	}
 
 	// ------------------------------------------------------------------------
 	// Factory Interface
@@ -151,24 +169,24 @@ class AcctgTAccountTypeLib
 	// ------------------------------------------------------------------------
 	// Helpers
 
-	/**
-	 * @return string slugid type corresponding to taccount id
-	 */
-	static function slugid_for_acct($taccount_id)
-	{
-		return static::entry(\app\AcctgTAccountLib::entry($taccount_id)['type'])['slugid'];
-	}
+//	/**
+//	 * @return string slugid type corresponding to taccount id
+//	 */
+//	static function slugid_for_acct($taccount_id)
+//	{
+//		return static::entry(\app\AcctgTAccountLib::entry($taccount_id)['type'])['slugid'];
+//	}
 
-	/**
-	 * @todo refactor type system to accept nested types
-	 *
-	 * @return boolean true if taccount type is compatible with expected type
-	 */
-	static function matchcheck($taccount_id, $expected_type)
-	{
-		$taccount_type = static::slugid_for_acct($taccount_id);
-		return $taccount_type == $expected_type;
-	}
+//	/**
+//	 * @todo refactor type system to accept nested types
+//	 *
+//	 * @return boolean true if taccount type is compatible with expected type
+//	 */
+//	static function matchcheck($taccount_id, $expected_type)
+//	{
+//		$taccount_type = static::slugid_for_acct($taccount_id);
+//		return $taccount_type == $expected_type;
+//	}
 
 	/**
 	 * ...
@@ -207,68 +225,68 @@ class AcctgTAccountTypeLib
 		}
 	}
 
-	/**
-	 * @return array
-	 */
-	static function inferred_types_slugarray(array $types)
-	{
-		$inferred = [];
-		foreach ($types as $type)
-		{
-			$type_id = static::find_entry(['slugid' => $type])['id'];
-			$inferred = \app\Arr::merge($inferred, static::inferred_types($type_id));
-		}
+//	/**
+//	 * @return array
+//	 */
+//	static function inferred_types_slugarray(array $types)
+//	{
+//		$inferred = [];
+//		foreach ($types as $type)
+//		{
+//			$type_id = static::find_entry(['slugid' => $type])['id'];
+//			$inferred = \app\Arr::merge($inferred, static::inferred_types($type_id));
+//		}
+//
+//		return \array_unique($inferred);
+//	}
+//
+//	/**
+//	 * @return array
+//	 */
+//	static function inferred_types($type)
+//	{
+//		$tabledata = static::statement
+//			(
+//				__METHOD__,
+//				'
+//					SELECT entry.id
+//					 FROM :table entry
+//
+//					 JOIN `'.static::table().'` ref
+//					   ON ref.id = :target
+//
+//					 WHERE entry.lft >= ref.lft
+//					   AND entry.rgt <= ref.rgt
+//				'
+//			)
+//			->num(':target', $type)
+//			->run()
+//			->fetch_all();
+//
+//		return \app\Arr::gather($tabledata, 'id');
+//	}
 
-		return \array_unique($inferred);
-	}
-
-	/**
-	 * @return array
-	 */
-	static function inferred_types($type)
-	{
-		$tabledata = static::statement
-			(
-				__METHOD__,
-				'
-					SELECT entry.id
-					 FROM :table entry
-
-					 JOIN `'.static::table().'` ref
-					   ON ref.id = :target
-
-					 WHERE entry.lft >= ref.lft
-					   AND entry.rgt <= ref.rgt
-				'
-			)
-			->num(':target', $type)
-			->run()
-			->fetch_all();
-
-		return \app\Arr::gather($tabledata, 'id');
-	}
-
-	/**
-	 * @return array
-	 */
-	static function inferred_types_by_name($type_slugid)
-	{
-		$entry = static::find_entry(['slugid' => $type_slugid]);
-
-		if ($entry === null)
-		{
-			throw new \app\Exception('Type of slugid ['.$type_slugid.'].');
-		}
-		else # $entry !== null
-		{
-			return static::inferred_types($entry['id']);
-		}
-	}
+//	/**
+//	 * @return array
+//	 */
+//	static function inferred_types_by_name($type_slugid)
+//	{
+//		$entry = static::find_entry(['slugid' => $type_slugid]);
+//
+//		if ($entry === null)
+//		{
+//			throw new \app\Exception('Type of slugid ['.$type_slugid.'].');
+//		}
+//		else # $entry !== null
+//		{
+//			return static::inferred_types($entry['id']);
+//		}
+//	}
 
 	/**
 	 * @return id type id
 	 */
-	static function typebyname($typename)
+	static function type_by_slugid($typename)
 	{
 		$entry = \app\AcctgTAccountTypeLib::find_entry(['slugid' => $typename]);
 
@@ -282,38 +300,38 @@ class AcctgTAccountTypeLib
 		}
 	}
 
-	/**
-	 * @return int
-	 */
-	static function typefortaccount($taccount)
-	{
-		return \app\AcctgTAccountLib::find_entry(['id' => $taccount])['type'];
-	}
-
-	/**
-	 * @return array type slugids for a given taccount
-	 */
-	static function alltypesfortaccount($taccount)
-	{
-		$entries = static::statement
-			(
-				__METHOD__,
-				'
-					SELECT entry.slugid id
-					  FROM :table entry
-
-					  JOIN `'.\app\AcctgTAccountTypeLib::table().'` target
-						ON target.id = :target
-
-					 WHERE entry.lft <= target.lft
-					   AND entry.rgt >= target.rgt
-				'
-			)
-			->num(':target', static::typefortaccount($taccount))
-			->run()
-			->fetch_all();
-
-		return \app\Arr::gather($entries, 'id');
-	}
+//	/**
+//	 * @return int
+//	 */
+//	static function typefortaccount($taccount)
+//	{
+//		return \app\AcctgTAccountLib::find_entry(['id' => $taccount])['type'];
+//	}
+//
+//	/**
+//	 * @return array type slugids for a given taccount
+//	 */
+//	static function alltypesfortaccount($taccount)
+//	{
+//		$entries = static::statement
+//			(
+//				__METHOD__,
+//				'
+//					SELECT entry.slugid id
+//					  FROM :table entry
+//
+//					  JOIN `'.\app\AcctgTAccountTypeLib::table().'` target
+//						ON target.id = :target
+//
+//					 WHERE entry.lft <= target.lft
+//					   AND entry.rgt >= target.rgt
+//				'
+//			)
+//			->num(':target', static::typefortaccount($taccount))
+//			->run()
+//			->fetch_all();
+//
+//		return \app\Arr::gather($entries, 'id');
+//	}
 
 } # class

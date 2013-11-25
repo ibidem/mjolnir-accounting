@@ -84,6 +84,14 @@ trait Trait_AcctgContext
 		return \app\AcctgReport_IncomeStatement::instance($options, $group);
 	}
 
+	/**
+	 * @return \mjolnir\accounting\AcctgReportInterface
+	 */
+	function acctgreport_ownerequity($options, $group = null)
+	{
+		return \app\AcctgReport_OwnerEquity::instance($options, $group);
+	}
+
 	// ------------------------------------------------------------------------
 	// Acctg Collections
 

@@ -15,11 +15,15 @@ class AcctgEntity_BalanceSheet extends \app\Instantiatable
 	/** @var array */
 	protected $group = null;
 
+	/** @var array */
+	protected $report = null;
+
 	/**
 	 * @return static
 	 */
 	static function instance(array $conf = null, $group = null)
 	{
+		/** @var AcctgEntity_BalanceSheet $i */
 		$i = parent::instance();
 
 		$i->conf = $conf;
