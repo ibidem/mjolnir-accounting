@@ -215,7 +215,7 @@ trait Trait_AcctgContext
 		}
 		else # leaf
 		{
-			$taccount['balance'] = \app\AcctgTAccountLib::balance_for($taccount['id']);
+			$taccount['balance'] = \app\AcctgTAccountLib::acct_balance($taccount['id']);
 		}
 	}
 

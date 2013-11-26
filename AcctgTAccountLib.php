@@ -11,6 +11,7 @@ class AcctgTAccountLib
 {
 	use \app\Trait_MarionetteLib;
 	use \app\Trait_NestedSetModel;
+	use \app\Trait_Model_AcctgCommonLib;
 
 	/** @var array cache */
 	protected static $signs = [];
@@ -23,48 +24,25 @@ class AcctgTAccountLib
 		return \app\AcctgTAccountTypeLib::table();
 	}
 
-	/**
-	 * @return int
-	 */
-	static function rootsign($taccount)
+	static function treesign($taccount)
 	{
-		$entries = static::statement
-			(
-				__METHOD__,
-				'
-					SELECT entry.sign
-					  FROM `'.static::table().'` entry
-
-					  JOIN `'.static::table().'` target
-						ON target.id = :target
-
-				     WHERE entry.lft <= target.lft
-					   AND entry.rgt >= target.rgt
-				'
-			)
-			->num(':target', $taccount)
-			->run()
-			->fetch_all();
-
-		return \app\Arr::intmul($entries, 'sign');
+		return \app\AcctgTAccountTypeLib::rootsign(static::entry($taccount)['type']) * static::rootsign($taccount);
 	}
 
 	/**
+	 * While this method produces the same result as treesign; since the result
+	 * is a mathematical coincidence the method is seperate for clarity.
+	 *
 	 * @return int
 	 */
 	static function acctg_zerosum_sign($taccount)
 	{
-		$sign = +1;
+		# We would need to calculate Equity Cr/Dr sign correction and also
+		# apply an inversion since we're moving right side of the equation to
+		# the left, since that implies -1 * -1 and for the Assets is +1 * +1 we
+		# simply skip the step as both resolve to +1 multiplication.
 
-		if (\app\AcctgTAccountTypeLib::is_equity_acct($taccount))
-		{
-			$sign = -1;
-		}
-
-		$sign *= \app\AcctgTAccountTypeLib::rootsign(static::entry($taccount)['type']);
-		$sign *= \app\AcctgTAccountLib::rootsign($taccount);
-
-		return $sign;
+		return static::treesign($taccount);
 	}
 
 	/**
@@ -81,7 +59,7 @@ class AcctgTAccountLib
 			$sign_adjustment = +1;
 		}
 
-		return (int) \app\SQL::prepare
+		return (float) \app\SQL::prepare
 			(
 				__METHOD__,
 				'
@@ -110,13 +88,9 @@ class AcctgTAccountLib
 			$sign_adjustment = +1;
 		}
 
-		echo "\nacctgeq_balance($taccount) -> $sign_adjustment\n";
-		$sign_adjustment *= \app\AcctgTAccountTypeLib::rootsign(static::entry($taccount)['type']);
-		echo "\nacctgeq_balance($taccount) -> $sign_adjustment\n";
-		$sign_adjustment *= \app\AcctgTAccountLib::rootsign($taccount);
-		echo "\nacctgeq_balance($taccount) -> $sign_adjustment\n";
+		$sign_adjustment *= static::treesign($taccount);
 
-		return (int) \app\SQL::prepare
+		return (float) \app\SQL::prepare
 			(
 				__METHOD__,
 				'
@@ -135,19 +109,34 @@ class AcctgTAccountLib
 	/**
 	 * @return float
 	 */
+	static function acctg_zerosum_balance($taccount)
+	{
+		if (\app\AcctgTAccountTypeLib::is_equity_acct($taccount))
+		{
+			return static::acctgeq_balance($taccount) * -1;
+		}
+		else # assets taccount
+		{
+			return static::acctgeq_balance($taccount);
+		}
+	}
+
+	/**
+	 * @return float
+	 */
 	static function checksum($group = null)
 	{
-		return (int) \app\SQL::prepare
+		return (float) \app\SQL::prepare
 			(
 				__METHOD__,
 				'
 					SELECT SUM(op.amount_value * op.type * taccount.zerosum_sign)
-					  FROM `'.\app\AcctgTAccountLib::table().'` taccount
+					  FROM `'.\app\AcctgTransactionOperationLib::table().'` op
 
-					  JOIN `'.\app\AcctgTransactionOperationLib::table().'` op
+					  JOIN `'.\app\AcctgTAccountLib::table().'` taccount
 					    ON op.taccount = taccount.id
 
-					 WHERE taccount.group = :group
+					 WHERE taccount.group <=> :group
 				'
 			)
 			->num(':group', $group)
@@ -615,24 +604,6 @@ class AcctgTAccountLib
 //			->fetch_calc(0.00)
 //			* $debit_mod;
 //	}
-
-	/**
-	 * @return int TAccount id
-	 * @throws \app\Exception could not find taccount
-	 */
-	static function named($slugid)
-	{
-		$entry = static::find_entry(['slugid' => $slugid]);
-
-		if ($entry === null)
-		{
-			throw new \app\Exception("Could not find TAccount called [$slugid]");
-		}
-		else # found TAccount
-		{
-			return $entry['id'];
-		}
-	}
 
 	// ------------------------------------------------------------------------
 	// Setup Helpers

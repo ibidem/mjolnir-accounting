@@ -56,7 +56,7 @@ class PHPUnit_Framework_AcctgTestCase extends \app\PHPUnit_Framework_TestCase
 					(
 						[
 							'transaction' => $transaction['id'],
-							'type' => $req_op['type'],
+							'type' => $req_op['type'] * \app\AcctgTAccountLib::rootsign($req_op['taccount']) * \app\AcctgTAccountTypeLib::rootsign(\app\AcctgTAccountLib::entry($req_op['taccount'])['type']),
 							'taccount' => $req_op['taccount'],
 							'note' => $req_op['note'],
 							'amount' => array

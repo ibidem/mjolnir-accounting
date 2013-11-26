@@ -64,6 +64,8 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 		// set generation time
 		$report['timestamp'] = \date_create();
 
+		$report['data'] = [];
+
 		// Retrieve entries
 		// ----------------
 
@@ -73,6 +75,15 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 
 		foreach ($conf['breakdown'] as $key => $conf)
 		{
+			$report['data'][$key] = array
+				(
+					'capital' => null,
+					'investments' => [],
+					'withdrawls' => [],
+					'net_total' => null,
+					'ending_capital' => null
+				);
+
 			// retrieve all relevant capital accounts for start of year calculations
 			$sql_totals = \app\SQL::prepare
 				(
@@ -122,11 +133,13 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 			$start_of_year_capital_cents = 0;
 			foreach ($sql_totals as &$entry)
 			{
-				$entry['types'] = \app\AcctgTAccountTypeLib::alltypesfortaccount($entry['taccount']);
+				$entry['types'] = \app\AcctgTAccountTypeLib::typeids_for($entry['taccount']);
 				// we multiply by -1 to adjust Dr/Cr to show positive instead of negative values
-				$entry['total'] = $entry['total'] * \app\AcctgTAccountTypeLib::sign($entry['type']) * \app\AcctgTAccountLib::sign($entry['taccount']) * (-1);
+				$entry['total'] = $entry['total'] * \app\AcctgTAccountLib::treesign($entry['taccount']) * -1;
 				$start_of_year_capital_cents += \intval($entry['total'] * 100);
 			}
+
+			$report['data'][$key]['capital'] = $start_of_year_capital_cents / 100;
 
 			// retrieve investment accounts
 			$sql_totals = \app\SQL::prepare
@@ -167,13 +180,14 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 			$investments_for_period_cents = 0;
 			foreach ($sql_totals as &$entry)
 			{
-				$entry['types'] = \app\AcctgTAccountTypeLib::alltypesfortaccount($entry['taccount']);
+				$entry['types'] = \app\AcctgTAccountTypeLib::typeids_for($entry['taccount']);
 				// we multiply by -1 to adjust Dr/Cr to show positive instead of negative values
-				$entry['total'] = $entry['total'] * \app\AcctgTAccountTypeLib::sign($entry['type']) * \app\AcctgTAccountLib::sign($entry['taccount']) * (-1);
+				$entry['total'] = $entry['total'] * \app\AcctgTAccountLib::treesign($entry['taccount']) * -1;
 				$investments_for_period_cents += \intval($entry['total'] * 100);
+				$report['data'][$key]['investments'][$entry['taccount']] = $entry['total'];
 			}
 
-			$totals[$key] = $start_of_year_capital_cents + $investments_for_period_cents;
+			$report['data'][$key]['ending_capital'] = $start_of_year_capital_cents + $investments_for_period_cents;
 
 			// Calculate Net Income/Loss
 			// -------------------------
@@ -197,7 +211,9 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 					$this->group
 				);
 
-			$totals[$key] += \intval($income_statement->run()->total() * 100) * (-1);
+			$net_total = $income_statement->run()->total();
+			$report['data'][$key]['net_total'] = $net_total;
+			$report['data'][$key]['ending_capital'] += \intval($net_total * 100) * -1;
 
 			// Withdraws
 			// ---------
@@ -241,16 +257,15 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 
 			foreach ($sql_totals_draws as &$entry)
 			{
-				$totals[$key] += \intval(\floatval($entry['total']) * 100) * \app\AcctgTAccountTypeLib::sign($entry['type']) * \app\AcctgTAccountLib::sign($entry['taccount']) * (-1);
+				$report['data'][$key]['ending_capital'] += \intval(\floatval($entry['total']) * 100) * \app\AcctgTAccountLib::treesign($entry['taccount']) * -1;
+				$report['data'][$key]['withdrawls'][$entry['taccount']] = $entry['total'];
 			}
+
+			$report['data'][$key]['ending_capital'] /= 100;
 		}
 
-		foreach ($totals as &$total)
-		{
-			$total = $total / 100;
-		}
-
-		$this->report['data'] = $totals;
+		//$this->report = $report;
+		//$this->report['data'] = $totals;
 
 		return $this;
 	}

@@ -77,14 +77,14 @@ class AcctgReport_IncomeStatement extends \app\AcctgReport
 		// Resolve Income
 		// --------------
 
-		$incometypes = \app\AcctgTAccountTypeLib::typebyname('revenue');
+		$revenuetypes = \app\AcctgTAccountTypeLib::relatedtypes(\app\AcctgTAccountTypeLib::named('revenue'));
 		$income_taccounts = \app\AcctgTAccountLib::tree_hierarchy
 			(
 				null, null, 0,
 				null,
 				[
 					'entry.group' => $this->get('group', null),
-					'entry.type' => [ 'in' => \app\AcctgTAccountTypeLib::inferred_types($incometypes) ],
+					'entry.type' => [ 'in' => $revenuetypes ],
 				]
 			);
 
@@ -94,10 +94,10 @@ class AcctgReport_IncomeStatement extends \app\AcctgReport
 		{
 			foreach ($keys as $key)
 			{
-				if (isset($totals[$key][$taccount['id']]))
+				if (isset($totals[$key]['income'][$taccount['id']]))
 				{
 					// we multiply by -1 to account for Cr/Dr inversion
-					$taccount[$key] = \floatval($totals[$key][$taccount['id']]) * (-1);
+					$taccount[$key] = \floatval($totals[$key]['income'][$taccount['id']]);
 				}
 				else # no total (ie. no operations involving the taccount exist)
 				{
@@ -117,14 +117,14 @@ class AcctgReport_IncomeStatement extends \app\AcctgReport
 		// Resolve Expenses
 		// ----------------
 
-		$expensestype = \app\AcctgTAccountTypeLib::typebyname('expenses');
+		$expensestypes = \app\AcctgTAccountTypeLib::relatedtypes(\app\AcctgTAccountTypeLib::named('expenses'));
 		$expense_taccounts = \app\AcctgTAccountLib::tree_hierarchy
 			(
 				null, null, 0,
 				null,
 				[
 					'entry.group' => $this->get('group', null),
-					'entry.type' => [ 'in' => \app\AcctgTAccountTypeLib::inferred_types($expensestype) ],
+					'entry.type' => [ 'in' => $expensestypes ],
 				]
 			);
 
@@ -134,10 +134,10 @@ class AcctgReport_IncomeStatement extends \app\AcctgReport
 		{
 			foreach ($keys as $key)
 			{
-				if (isset($totals[$key][$taccount['id']]))
+				if (isset($totals[$key]['expenses'][$taccount['id']]))
 				{
 					// we multiply by -1 to account for Cr/Dr inversion
-					$taccount[$key] = \floatval($totals[$key][$taccount['id']]) * (-1);
+					$taccount[$key] = \floatval($totals[$key]['expenses'][$taccount['id']]);
 				}
 				else # no total (ie. no operations involving the taccount exist)
 				{
@@ -165,7 +165,7 @@ class AcctgReport_IncomeStatement extends \app\AcctgReport
 
 		foreach ($expenseview->totals() as $key => $total)
 		{
-			$nettotal[$key] -= \intval($total * 100);
+			$nettotal[$key] += \intval($total * 100);
 		}
 
 		foreach ($nettotal as $key => $total)

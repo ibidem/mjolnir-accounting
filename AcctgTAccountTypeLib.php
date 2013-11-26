@@ -11,6 +11,7 @@ class AcctgTAccountTypeLib
 {
 	use \app\Trait_MarionetteLib;
 	use \app\Trait_NestedSetModel;
+	use \app\Trait_Model_AcctgCommonLib;
 
 //	/**
 //	 * Roots are always considered positive as per their definition.
@@ -58,6 +59,84 @@ class AcctgTAccountTypeLib
 //
 //		return $root_debit_mod * static::sign($type);
 //	}
+
+	/**
+	 * @return array
+	 */
+	static function typeslugs_for($taccount)
+	{
+		$tabledata = static::statement
+			(
+				__METHOD__,
+				'
+					SELECT entry.slugid
+					 FROM `'.static::table().'` entry
+
+					 JOIN `'.static::table().'` ref
+					   ON ref.id = :target
+
+					 WHERE entry.lft <= ref.lft
+					   AND entry.rgt >= ref.rgt
+				'
+			)
+			->num(':target', \app\AcctgTAccountLib::entry($taccount)['type'])
+			->run()
+			->fetch_all();
+
+		return \app\Arr::gather($tabledata, 'slugid');
+	}
+
+	/**
+	 * @return array
+	 */
+	static function typeids_for($taccount)
+	{
+		$tabledata = static::statement
+			(
+				__METHOD__,
+				'
+					SELECT entry.id
+					 FROM `'.static::table().'` entry
+
+					 JOIN `'.static::table().'` ref
+					   ON ref.id = :target
+
+					 WHERE entry.lft <= ref.lft
+					   AND entry.rgt >= ref.rgt
+				'
+			)
+			->num(':target', \app\AcctgTAccountLib::entry($taccount)['type'])
+			->run()
+			->fetch_all();
+
+		return \app\Arr::gather($tabledata, 'id');
+	}
+
+	/**
+	 * @return array sub types
+	 */
+	static function relatedtypes($root)
+	{
+		$tabledata = static::statement
+			(
+				__METHOD__,
+				'
+					SELECT entry.id
+					 FROM `'.static::table().'` entry
+
+					 JOIN `'.static::table().'` ref
+					   ON ref.id = :target
+
+					 WHERE entry.lft >= ref.lft
+					   AND entry.rgt <= ref.rgt
+				'
+			)
+			->num(':target', $root)
+			->run()
+			->fetch_all();
+
+		return \app\Arr::gather($tabledata, 'id');
+	}
 
 	// ------------------------------------------------------------------------
 	// Factory Interface
@@ -283,22 +362,22 @@ class AcctgTAccountTypeLib
 //		}
 //	}
 
-	/**
-	 * @return id type id
-	 */
-	static function type_by_slugid($typename)
-	{
-		$entry = \app\AcctgTAccountTypeLib::find_entry(['slugid' => $typename]);
-
-		if ($entry === null)
-		{
-			throw new \app\Exception('The system does not know of any type called ['.$typename.'].');
-		}
-		else # entry !== null
-		{
-			return $entry['id'];
-		}
-	}
+//	/**
+//	 * @return id type id
+//	 */
+//	static function type_by_slugid($typename)
+//	{
+//		$entry = \app\AcctgTAccountTypeLib::find_entry(['slugid' => $typename]);
+//
+//		if ($entry === null)
+//		{
+//			throw new \app\Exception('The system does not know of any type called ['.$typename.'].');
+//		}
+//		else # entry !== null
+//		{
+//			return $entry['id'];
+//		}
+//	}
 
 //	/**
 //	 * @return int
@@ -334,31 +413,31 @@ class AcctgTAccountTypeLib
 //		return \app\Arr::gather($entries, 'id');
 //	}
 
-	/**
-	 * @return int
-	 */
-	static function rootsign($type)
-	{
-		$entries = static::statement
-			(
-				__METHOD__,
-				'
-					SELECT entry.sign
-					  FROM `'.static::table().'` entry
-
-					  JOIN `'.static::table().'` target
-						ON target.id = :target
-
-				     WHERE entry.lft <= target.lft
-					   AND entry.rgt >= target.rgt
-				'
-			)
-			->num(':target', $type)
-			->run()
-			->fetch_all();
-
-		return \app\Arr::intmul($entries, 'sign');
-	}
+//	/**
+//	 * @return int
+//	 */
+//	static function rootsign($type)
+//	{
+//		$entries = static::statement
+//			(
+//				__METHOD__,
+//				'
+//					SELECT entry.sign
+//					  FROM `'.static::table().'` entry
+//
+//					  JOIN `'.static::table().'` target
+//						ON target.id = :target
+//
+//				     WHERE entry.lft <= target.lft
+//					   AND entry.rgt >= target.rgt
+//				'
+//			)
+//			->num(':target', $type)
+//			->run()
+//			->fetch_all();
+//
+//		return \app\Arr::intmul($entries, 'sign');
+//	}
 
 	/**
 	 * @return boolean
@@ -372,22 +451,22 @@ class AcctgTAccountTypeLib
 		return $taccount_type['lft'] >= $equity['lft'] && $taccount_type['rgt'] <= $equity['rgt'];
 	}
 
-	/**
-	 * @return int
-	 * @throws \app\Exception if no type is available
-	 */
-	static function named($slugid)
-	{
-		$entry = static::find_entry(['slugid' => $slugid]);
-
-		if ($entry === null)
-		{
-			throw new \app\Exception("Could not find any type called [$slugid]");
-		}
-		else # found type
-		{
-			return $entry['id'];
-		}
-	}
+//	/**
+//	 * @return int
+//	 * @throws \app\Exception if no type is available
+//	 */
+//	static function named($slugid)
+//	{
+//		$entry = static::find_entry(['slugid' => $slugid]);
+//
+//		if ($entry === null)
+//		{
+//			throw new \app\Exception("Could not find any type called [$slugid]");
+//		}
+//		else # found type
+//		{
+//			return $entry['id'];
+//		}
+//	}
 
 } # class

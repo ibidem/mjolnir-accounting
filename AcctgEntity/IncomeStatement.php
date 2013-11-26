@@ -90,29 +90,34 @@ class AcctgEntity_IncomeStatement extends \app\Instantiatable
 
 			foreach ($sql_totals as &$entry)
 			{
-				$entry['type'] = \app\AcctgTAccountTypeLib::typefortaccount($entry['taccount']);
-				$entry['total'] = \intval(\floatval($entry['total']) * 100) * \app\AcctgTAccountTypeLib::sign($entry['type']) * \app\AcctgTAccountLib::sign($entry['taccount']) / 100;
+				$entry['total']
+					= \intval(\floatval($entry['total']) * 100)
+					* \app\AcctgTAccountLib::treesign($entry['taccount'])
+					* ( \app\AcctgTAccountTypeLib::is_equity_acct($entry['taccount']) ? -1 : +1 )
+					/ 100;
 			}
 
 			$totals[$key] = \app\Arr::gatherkeys($sql_totals, 'taccount', 'total');
 		}
 
-		$incometypes = \app\AcctgTAccountTypeLib::inferred_types(\app\AcctgTAccountTypeLib::typebyname('revenue'));
-		$expensetypes = \app\AcctgTAccountTypeLib::inferred_types(\app\AcctgTAccountTypeLib::typebyname('expenses'));
-
-		$accepted_types = \array_merge($incometypes, $expensetypes);
+		$incometypes = \app\AcctgTAccountTypeLib::relatedtypes(\app\AcctgTAccountTypeLib::named('revenue'));
+		$expensetypes = \app\AcctgTAccountTypeLib::relatedtypes(\app\AcctgTAccountTypeLib::named('expenses'));
 
 		$filtered_totals = [];
 
 		foreach ($totals as $key => $taccounts)
 		{
-			$filtered_totals[$key] = [];
+			$filtered_totals[$key] = [ 'income' => [], 'expenses' => [] ];
 			foreach ($taccounts as $taccount_id => $total)
 			{
 				$taccount = \app\AcctgTAccountLib::entry($taccount_id);
-				if (\in_array($taccount['type'], $accepted_types))
+				if (\in_array($taccount['type'], $incometypes))
 				{
-					$filtered_totals[$key][$taccount_id] = $total;
+					$filtered_totals[$key]['income'][$taccount_id] = $total;
+				}
+				else if (\in_array($taccount['type'], $expensetypes))
+				{
+					$filtered_totals[$key]['expenses'][$taccount_id] = $total;
 				}
 			}
 		}
@@ -129,8 +134,8 @@ class AcctgEntity_IncomeStatement extends \app\Instantiatable
 	{
 		$report = $this->report();
 
-		$incometypes = \app\AcctgTAccountTypeLib::inferred_types(\app\AcctgTAccountTypeLib::typebyname('revenue'));
-		$expensetypes = \app\AcctgTAccountTypeLib::inferred_types(\app\AcctgTAccountTypeLib::typebyname('expenses'));
+		$incometypes = \app\AcctgTAccountTypeLib::relatedtypes(\app\AcctgTAccountTypeLib::named('revenue'));
+		$expensetypes = \app\AcctgTAccountTypeLib::relatedtypes(\app\AcctgTAccountTypeLib::named('expenses'));
 
 		$totals = [];
 
@@ -140,10 +145,12 @@ class AcctgEntity_IncomeStatement extends \app\Instantiatable
 			foreach ($accts as $taccount_id => $total)
 			{
 				$taccount = \app\AcctgTAccountLib::entry($taccount_id);
+
 				if (\in_array($taccount['type'], $incometypes))
 				{
 					$total_cents += \intval($total * 100) * (-1);
 				}
+
 				if (\in_array($taccount['type'], $expensetypes))
 				{
 					$total_cents -= \intval($total * 100);
