@@ -18,8 +18,7 @@ class Acctg
 		# The following uses the US fiscal year.
 		#
 
-		// @todo CLEANUP add support for fiscal year of different regions and
-		// potentially different variation based on institutions
+		// @todo CLEANUP add support for fiscal year of different regions
 
 		if ($reference === null)
 		{
@@ -31,6 +30,10 @@ class Acctg
 			if (\is_string($reference))
 			{
 				$reference = \date_create($reference);
+			}
+			else
+			{
+				$reference = clone $reference;
 			}
 
 			// if the reference is before April, we are technically in a the

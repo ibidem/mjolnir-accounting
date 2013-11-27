@@ -56,10 +56,7 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 		$report = &$this->report;
 		$conf = &$this->conf;
 
-		foreach ($conf['breakdown'] as &$entry)
-		{
-			isset($entry['target']) or $entry['target'] = $entry['to'];
-		}
+		\var_dump($conf);
 
 		// set generation time
 		$report['timestamp'] = \date_create();
@@ -73,13 +70,13 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 		$capitalstock_type = \app\AcctgTAccountTypeLib::find_entry(['slugid' => 'capital-stock']);
 		$retained_earnings_type = \app\AcctgTAccountTypeLib::find_entry(['slugid' => 'retained-earnings']);
 
-		foreach ($conf['breakdown'] as $key => $conf)
+		foreach ($conf['breakdown'] as $key => $cnf)
 		{
 			$report['data'][$key] = array
 				(
 					'capital' => null,
 					'investments' => [],
-					'withdrawls' => [],
+					'withdrawals' => [],
 					'net_total' => null,
 					'ending_capital' => null
 				);
@@ -104,7 +101,7 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 						  JOIN `'.\app\AcctgTaccountTypeLib::table().'` type
 							ON type.id = taccount.type
 
-						 WHERE tr.date < :start_of_year
+						 WHERE unix_timestamp(tr.date) < unix_timestamp(:from)
 						   AND tr.group <=> :group
 						   AND
 						   (
@@ -125,7 +122,7 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 				->num(':retained_earnings_lft', $retained_earnings_type['lft'])
 				->num(':retained_earnings_rgt', $retained_earnings_type['rgt'])
 				->num(':group', $this->group)
-				->date(':start_of_year', \app\Acctg::fiscalyear_start_for($conf['target'], $this->group))
+				->date(':from', $cnf['from']->format('Y-m-d'))
 				->run()
 				->fetch_all();
 
@@ -161,7 +158,8 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 						  JOIN `'.\app\AcctgTaccountTypeLib::table().'` type
 							ON type.id = taccount.type
 
-						 WHERE tr.date >= :start_of_year
+						 WHERE tr.date >= :from
+						   AND tr.date < :to
 						   AND tr.group <=> :group
 						   AND type.lft >= :investments_lft
 						   AND type.rgt <= :investments_rgt
@@ -172,7 +170,8 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 				->num(':investments_lft', $investments_type['lft'])
 				->num(':investments_rgt', $investments_type['rgt'])
 				->num(':group', $this->group)
-				->date(':start_of_year', \app\Acctg::fiscalyear_start_for($conf['target'], $this->group))
+				->date(':from', $cnf['from']->format('Y-m-d'))
+				->date(':to', $cnf['to']->format('Y-m-d'))
 				->run()
 				->fetch_all();
 
@@ -192,10 +191,6 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 			// Calculate Net Income/Loss
 			// -------------------------
 
-			$start_of_period = \date_create(\app\Acctg::fiscalyear_start_for($conf['target'], $this->group));
-			$end_of_period = clone $start_of_period;
-			$end_of_period->modify('+12 months');
-
 			$income_statement = \app\AcctgEntity_IncomeStatement::instance
 				(
 					[
@@ -203,8 +198,8 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 							(
 								'total' => array
 									(
-										'from' => $start_of_period,
-										'to' => $end_of_period
+										'from' => $cnf['from'],
+										'to' => $cnf['to']
 									),
 							),
 					],
@@ -213,12 +208,12 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 
 			$net_total = $income_statement->run()->total();
 			$report['data'][$key]['net_total'] = $net_total;
-			$report['data'][$key]['ending_capital'] += \intval($net_total * 100) * -1;
+			$report['data'][$key]['ending_capital'] += \intval($net_total * 100);
 
-			// Withdraws
-			// ---------
+			// Withdrawals
+			// -----------
 
-			$draws = \app\AcctgTAccountTypeLib::find_entry(['slugid' => 'withdraws']);
+			$draws = \app\AcctgTAccountTypeLib::find_entry(['slugid' => 'withdrawals']);
 
 			$sql_totals_draws = \app\SQL::prepare
 				(
@@ -239,7 +234,8 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 						  JOIN `'.\app\AcctgTaccountTypeLib::table().'` type
 							ON type.id = taccount.type
 
-						 WHERE tr.date BETWEEN :start_of_period AND :end_of_period
+						 WHERE unix_timestamp(tr.date) >= unix_timestamp(:from)
+						   AND unix_timestamp(tr.date) < unix_timestamp(:to)
 						   AND tr.group <=> :group
 						   AND type.lft >= :revenue_lft
 						   AND type.rgt <= :revenue_rgt
@@ -250,22 +246,19 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 				->num(':revenue_lft', $draws['lft'])
 				->num(':revenue_rgt', $draws['rgt'])
 				->num(':group', $this->group)
-				->date(':start_of_period', $start_of_period->format('Y-m-d H:i:s'))
-				->date(':end_of_period', $end_of_period->format('Y-m-d H:i:s'))
+				->date(':from', $cnf['from']->format('Y-m-d H:i:s'))
+				->date(':to', $cnf['to']->format('Y-m-d H:i:s'))
 				->run()
 				->fetch_all();
 
 			foreach ($sql_totals_draws as &$entry)
 			{
 				$report['data'][$key]['ending_capital'] += \intval(\floatval($entry['total']) * 100) * \app\AcctgTAccountLib::treesign($entry['taccount']) * -1;
-				$report['data'][$key]['withdrawls'][$entry['taccount']] = $entry['total'];
+				$report['data'][$key]['withdrawals'][$entry['taccount']] = $entry['total'];
 			}
 
 			$report['data'][$key]['ending_capital'] /= 100;
 		}
-
-		//$this->report = $report;
-		//$this->report['data'] = $totals;
 
 		return $this;
 	}

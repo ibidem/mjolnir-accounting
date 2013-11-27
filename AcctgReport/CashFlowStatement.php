@@ -10,7 +10,7 @@
 class AcctgReport_CashFlowStatement extends \app\AcctgReport
 {
 	/**
-	 * @return static $this
+	 * @return static
 	 */
 	static function instance($options = null, $group = null)
 	{

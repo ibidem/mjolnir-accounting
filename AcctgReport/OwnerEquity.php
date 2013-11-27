@@ -10,7 +10,7 @@
 class AcctgReport_OwnerEquity extends \app\AcctgReport
 {
 	/**
-	 * @return static $this
+	 * @return static
 	 */
 	static function instance($options = null, $group = null)
 	{
@@ -60,9 +60,7 @@ class AcctgReport_OwnerEquity extends \app\AcctgReport
 		$entity = \app\AcctgEntity_OwnerEquity::instance($acctg_input, $this->get('group', null));
 		$result = $entity->run()->report();
 
-		\var_dump($result); die;
-
-		$totals = $result['data'];
+		$rawtotals = $result['data'];
 
 		// set generation time
 		$this->set('timestamp', $result['timestamp']);
@@ -76,113 +74,41 @@ class AcctgReport_OwnerEquity extends \app\AcctgReport
 			$this->headers[] = $segment['title'];
 		}
 
-		// Resolve Income
-		// --------------
+		$prev_capital = [];
+		$investments = [];
+		$withdrawals = [];
+		$net_total = [];
+		$ending_capital = [];
 
-		$incometypes = \app\AcctgTAccountTypeLib::typebyname('revenue');
-		$income_taccounts = \app\AcctgTAccountLib::tree_hierarchy
-			(
-				null, null, 0,
-				null,
-				[
-					'entry.group' => $this->get('group', null),
-					'entry.type' => [ 'in' => \app\AcctgTAccountTypeLib::inferred_types($incometypes) ],
-				]
-			);
-
-		$refs_income_accounts = \app\Arr::refs_from($income_taccounts, 'id', 'subentries');
-
-		foreach ($refs_income_accounts as &$taccount)
+		foreach ($keys as $key)
 		{
-			foreach ($keys as $key)
+			$prev_capital[$key] = $rawtotals[$key]['capital'];
+
+			$sum = 0;
+			foreach ($rawtotals[$key]['investments'] as $entry)
 			{
-				if (isset($totals[$key][$taccount['id']]))
-				{
-					// we multiply by -1 to account for Cr/Dr inversion
-					$taccount[$key] = \floatval($totals[$key][$taccount['id']]) * (-1);
-				}
-				else # no total (ie. no operations involving the taccount exist)
-				{
-					$taccount[$key] = 0.00;
-				}
+				$sum += \intval($entry * 100);
 			}
-		}
 
-		$incomeview = $this->reportview->newcategory('Income');
+			$investments[$key] = $sum / 100;
 
-		$this->integrate_taccounts
-			(
-				$incomeview,
-				$income_taccounts
-			);
-
-		// Resolve Expenses
-		// ----------------
-
-		$expensestype = \app\AcctgTAccountTypeLib::typebyname('expenses');
-		$expense_taccounts = \app\AcctgTAccountLib::tree_hierarchy
-			(
-				null, null, 0,
-				null,
-				[
-					'entry.group' => $this->get('group', null),
-					'entry.type' => [ 'in' => \app\AcctgTAccountTypeLib::inferred_types($expensestype) ],
-				]
-			);
-
-		$refs_expenses_taccounts = \app\Arr::refs_from($expense_taccounts, 'id', 'subentries');
-
-		foreach ($refs_expenses_taccounts as &$taccount)
-		{
-			foreach ($keys as $key)
+			$sum = 0;
+			foreach ($rawtotals[$key]['withdrawals'] as $entry)
 			{
-				if (isset($totals[$key][$taccount['id']]))
-				{
-					// we multiply by -1 to account for Cr/Dr inversion
-					$taccount[$key] = \floatval($totals[$key][$taccount['id']]) * (-1);
-				}
-				else # no total (ie. no operations involving the taccount exist)
-				{
-					$taccount[$key] = 0.00;
-				}
+				$sum += \intval($entry * 100);
 			}
+
+			$withdrawals[$key] = $sum / 100;
+
+			$net_total[$key] = $rawtotals[$key]['net_total'];
+			$ending_capital[$key] = $rawtotals[$key]['ending_capital'];
 		}
 
-		$expenseview = $this->reportview->newcategory('Expenses');
-
-		$this->integrate_taccounts
-			(
-				$expenseview,
-				$expense_taccounts
-			);
-
-		// Totals
-		// ------
-
-		$nettotal = [];
-		foreach ($incomeview->totals() as $key => $total)
-		{
-			$nettotal[$key] = \intval($total * 100);
-		}
-
-		foreach ($expenseview->totals() as $key => $total)
-		{
-			$nettotal[$key] -= \intval($total * 100);
-		}
-
-		foreach ($nettotal as $key => $total)
-		{
-			$nettotal[$key] = $nettotal[$key] / 100;
-		}
-
-		if ($nettotal['total'] >= 0)
-		{
-			$this->reportview->newdataentry($nettotal + ['title' => '<b>Net Income</b>']);
-		}
-		else # balance < 0
-		{
-			$this->reportview->newdataentry($nettotal + ['title' => '<b>Net Loss</b>']);
-		}
+		$this->reportview->newdataentry($prev_capital + ['title' => 'Previous Capital']);
+		$this->reportview->newdataentry($investments + ['title' => 'Investments for period']);
+		$this->reportview->newdataentry($net_total + ['title' => 'Net Income']);
+		$this->reportview->newdataentry($withdrawals + ['title' => 'Withdrawls']);
+		$this->reportview->newdataentry($ending_capital + ['title' => 'Ending Capital']);
 
 		return $this;
 	}

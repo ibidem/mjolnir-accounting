@@ -62,8 +62,10 @@ class AcctgEntity_BalanceSheet extends \app\Instantiatable
 		// Retrieve entries
 		// ----------------
 
-		foreach ($conf['breakdown'] as $key => $conf)
+		foreach ($conf['breakdown'] as $key => $cnf)
 		{
+			$totals[$key] = [ 'assets' => [], 'liabilities' => [], 'capital' => 0.00 ];
+
 			$sql_totals = \app\SQL::prepare
 				(
 					__METHOD__.'account-totals',
@@ -83,19 +85,44 @@ class AcctgEntity_BalanceSheet extends \app\Instantiatable
 						 GROUP BY op.taccount
 					'
 				)
-				->num(':start_date', $conf['from']->format('Y-m-d H:i:s'))
-				->num(':end_date', $conf['to']->format('Y-m-d H:i:s'))
+				->num(':start_date', $cnf['from']->format('Y-m-d H:i:s'))
+				->num(':end_date', $cnf['to']->format('Y-m-d H:i:s'))
 				->num(':group', $this->group)
 				->run()
 				->fetch_all();
 
+			$asset_types = \app\AcctgTAccountTypeLib::relatedtypes(\app\AcctgTAccountTypeLib::named('assets'));
+			$liability_types = \app\AcctgTAccountTypeLib::relatedtypes(\app\AcctgTAccountTypeLib::named('liabilities'));
+
 			foreach ($sql_totals as $entry)
 			{
-				$entry['type'] = \app\AcctgTAccountTypeLib::typefortaccount($entry['taccount']);
-				$entry['total'] = $entry['total'] * \app\AcctgTAccountTypeLib::sign($entry['type']) * \app\AcctgTAccountLib::sign($entry['taccount']);
+				$entry_type = \app\AcctgTAccountLib::entry($entry['taccount'])['type'];
+				if (\in_array($entry_type, $asset_types))
+				{
+					$totals[$key]['assets'][$entry['taccount']] = $entry['total'] * \app\AcctgTAccountLib::treesign($entry['taccount']);
+				}
+				else if (\in_array($entry_type, $liability_types))
+				{
+					$totals[$key]['liabilities'][$entry['taccount']] = $entry['total'] * \app\AcctgTAccountLib::treesign($entry['taccount']);
+				}
 			}
 
-			$totals[$key] = \app\Arr::gatherkeys($sql_totals, 'taccount', 'total');
+			$oe_statement = \app\AcctgEntity_OwnerEquity::instance
+				(
+					[
+						'breakdown' => array
+							(
+								'total' => array
+									(
+										'from' => $cnf['from'],
+										'to' => $cnf['to']
+									),
+							)
+					],
+					$this->group
+				);
+
+			$totals[$key]['capital'] = $oe_statement->run()->report()['data']['total']['ending_capital'];
 		}
 
 		$this->report['data'] = $totals;

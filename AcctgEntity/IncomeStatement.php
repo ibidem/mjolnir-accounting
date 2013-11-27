@@ -134,27 +134,18 @@ class AcctgEntity_IncomeStatement extends \app\Instantiatable
 	{
 		$report = $this->report();
 
-		$incometypes = \app\AcctgTAccountTypeLib::relatedtypes(\app\AcctgTAccountTypeLib::named('revenue'));
-		$expensetypes = \app\AcctgTAccountTypeLib::relatedtypes(\app\AcctgTAccountTypeLib::named('expenses'));
-
 		$totals = [];
 
-		foreach ($report['data'] as $cat => $accts)
+		foreach ($report['data'] as $cat => $data)
 		{
 			$total_cents = 0;
-			foreach ($accts as $taccount_id => $total)
+			foreach ($data['income'] as $total)
 			{
-				$taccount = \app\AcctgTAccountLib::entry($taccount_id);
-
-				if (\in_array($taccount['type'], $incometypes))
-				{
-					$total_cents += \intval($total * 100) * (-1);
-				}
-
-				if (\in_array($taccount['type'], $expensetypes))
-				{
-					$total_cents -= \intval($total * 100);
-				}
+				$total_cents += \intval($total * 100);
+			}
+			foreach ($data['expenses'] as $total)
+			{
+				$total_cents += \intval($total * 100);
 			}
 
 			$totals[$cat] = $total_cents / 100;

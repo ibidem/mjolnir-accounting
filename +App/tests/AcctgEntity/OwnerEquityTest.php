@@ -16,7 +16,7 @@ class AcctgEntity_OwnerEquityTest extends \app\PHPUnit_Framework_AcctgTestCase
 		$cash = \app\AcctgTAccountLib::named('cash');
 		$capital = \app\AcctgTAccountLib::named('common-stock');
 		$investments = \app\AcctgTAccountLib::named('investments');
-		$withdraws = \app\AcctgTAccountLib::named('draws');
+		$withdrawals = \app\AcctgTAccountLib::named('withdrawals');
 		$marketing = \app\AcctgTAccountLib::named('marketing');
 		$revenue = \app\AcctgTAccountLib::named('revenue');
 
@@ -63,7 +63,7 @@ class AcctgEntity_OwnerEquityTest extends \app\PHPUnit_Framework_AcctgTestCase
 						],
 						[
 							'type' => -1, # credit
-							'taccount' => $capital,
+							'taccount' => $investments,
 							'note' => 'example',
 							'amount_value' => 1000,
 							'amount_type' => 'USD'
@@ -108,14 +108,14 @@ class AcctgEntity_OwnerEquityTest extends \app\PHPUnit_Framework_AcctgTestCase
 					(
 						[
 							'type' => +1, # debit
-							'taccount' => $cash,
+							'taccount' => $withdrawals,
 							'note' => 'example',
 							'amount_value' => 800,
 							'amount_type' => 'USD'
 						],
 						[
 							'type' => -1, # credit
-							'taccount' => $withdraws,
+							'taccount' => $cash,
 							'note' => 'example',
 							'amount_value' => 800,
 							'amount_type' => 'USD'
@@ -185,16 +185,25 @@ class AcctgEntity_OwnerEquityTest extends \app\PHPUnit_Framework_AcctgTestCase
 						(
 							'test' => array
 								(
-									'from' => \date_create('2013-01-01'),
-									'to' => \date_create('2015-01-01')
+									'from' => \date_create('2012-10-01'),
+									'to' => \date_create('2013-10-01')
 								)
 						)
 				],
 				null
 			);
 
-		echo "\n";
-		\var_dump($oe_statement->run()->report()['data']['test']); die;
+		$this->assertEquals
+			(
+				[
+					'capital' => 5000,
+					'investments' => [ $investments => 1300 ],
+					'withdrawals' => [ $withdrawals => -800 ],
+					'net_total' => 500,
+					'ending_capital' => 6000,
+				],
+				$oe_statement->run()->report()['data']['test']
+			);
 	}
 
 } # test

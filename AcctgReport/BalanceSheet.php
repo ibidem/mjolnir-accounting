@@ -10,7 +10,7 @@
 class AcctgReport_BalanceSheet extends \app\AcctgReport
 {
 	/**
-	 * @return static $this
+	 * @return static
 	 */
 	static function instance($options = null, $group = null)
 	{
@@ -89,14 +89,14 @@ class AcctgReport_BalanceSheet extends \app\AcctgReport
 
 		$totals = $result['data'];
 
-		$assetstype = \app\AcctgTAccountTypeLib::typebyname('assets');
+		$assetstypes = \app\AcctgTAccountTypeLib::named('assets');
 		$asset_taccounts = \app\AcctgTAccountLib::tree_hierarchy
 			(
 				null, null, 0,
 				null,
 				[
 					'entry.group' => $this->get('group', null),
-					'entry.type' => [ 'in' => \app\AcctgTAccountTypeLib::inferred_types($assetstype) ],
+					'entry.type' => [ 'in' => \app\AcctgTAccountTypeLib::relatedtypes($assetstypes) ],
 				]
 			);
 
@@ -106,9 +106,9 @@ class AcctgReport_BalanceSheet extends \app\AcctgReport
 		{
 			foreach ($keys as $key)
 			{
-				if (isset($totals[$key][$taccount['id']]))
+				if (isset($totals[$key]['assets'][$taccount['id']]))
 				{
-					$taccount[$key] = \floatval($totals[$key][$taccount['id']]);
+					$taccount[$key] = \floatval($totals[$key]['assets'][$taccount['id']]);
 				}
 				else # no total (ie. no operations involving the taccount exist)
 				{
@@ -133,14 +133,14 @@ class AcctgReport_BalanceSheet extends \app\AcctgReport
 		// Resolve Liabilities
 		// -------------------
 
-		$expensestype = \app\AcctgTAccountTypeLib::typebyname('liabilities');
+		$expensestype = \app\AcctgTAccountTypeLib::named('liabilities');
 		$expense_taccounts = \app\AcctgTAccountLib::tree_hierarchy
 			(
 				null, null, 0,
 				null,
 				[
 					'entry.group' => $this->get('group', null),
-					'entry.type' => [ 'in' => \app\AcctgTAccountTypeLib::inferred_types($expensestype) ],
+					'entry.type' => [ 'in' => \app\AcctgTAccountTypeLib::relatedtypes($expensestype) ],
 				]
 			);
 
@@ -150,10 +150,10 @@ class AcctgReport_BalanceSheet extends \app\AcctgReport
 		{
 			foreach ($keys as $key)
 			{
-				if (isset($totals[$key][$taccount['id']]))
+				if (isset($totals[$key]['liabilities'][$taccount['id']]))
 				{
 					// we multiply by -1 to account for Cr/Dr inversion
-					$taccount[$key] = \floatval($totals[$key][$taccount['id']]) * (-1);
+					$taccount[$key] = \floatval($totals[$key]['liabilities'][$taccount['id']]) * (-1);
 				}
 				else # no total (ie. no operations involving the taccount exist)
 				{
@@ -173,31 +173,13 @@ class AcctgReport_BalanceSheet extends \app\AcctgReport
 		// Resolve Capital
 		// ---------------
 
-		#
-		# Capital is calculated as total from Statement of Owner's Equity,
-		# which sums up to:
-		#
-		# ((Captial Stock + Investments + Retained Earnings) @ start of year)
-		#	+ Investments total + (Income Statement Total) - Withdrawls
-		#
+		$capital_totals = [];
+		foreach ($keys as $key)
+		{
+			$capital_totals[$key] = $totals[$key]['capital'];
+		}
 
-		// Total Start of Year OE
-		// ----------------------
-
-		$entity = \app\AcctgEntity_OwnerEquity::instance
-			(
-				[
-					'breakdown' => array
-						(
-							'total' => ['target' => $date_to],
-						)
-				],
-				$this->get('group', null)
-			);
-
-		$result = $entity->run()->report();
-
-		$liabilities_and_equity->newdataentry(['title' => 'Capital', 'total' => $result['data']['total']]);
+		$liabilities_and_equity->newdataentry(['title' => 'Capital'] + $capital_totals);
 
 		return $this;
 	}

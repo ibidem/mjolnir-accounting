@@ -282,7 +282,7 @@ class AcctgEntity_CashFlowStatement extends \app\Instantiatable
 			// --------------------
 
 			// get all current assets accounts
-			$withdrawl_types = \app\AcctgTAccountTypeLib::inferred_types_by_name('withdraws');
+			$withdrawl_types = \app\AcctgTAccountTypeLib::inferred_types_by_name('withdrawals');
 			$ownerequity_types = \app\AcctgTAccountTypeLib::inferred_types_by_name('owner-equity');
 			$investment_types = \array_diff($ownerequity_types, $withdrawl_types);
 

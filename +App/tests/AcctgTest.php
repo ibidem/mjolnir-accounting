@@ -10,6 +10,17 @@ class AcctgTest extends \app\PHPUnit_Framework_TestCase
 		$this->assertTrue(\class_exists('\mjolnir\accounting\Acctg'));
 	}
 
-	// @todo tests for \mjolnir\accounting\Acctg
+	/** @test */ function
+	fiscalyear_start_for()
+	{
+		$this->assertEquals(\date('Y-10-01'), Acctg::fiscalyear_start_for(null));
+		$this->assertEquals(\date('2012-10-01'), Acctg::fiscalyear_start_for('2013-01-01'));
+
+		// mutation test
+		$date_original = '2013-01-01';
+		$date = \date_create('2013-01-01');
+		Acctg::fiscalyear_start_for($date);
+		$this->assertEquals($date_original, $date->format('Y-m-d'));
+	}
 
 } # test

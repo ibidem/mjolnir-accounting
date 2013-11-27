@@ -116,10 +116,10 @@
 						'usable' => true,
 					),
 
-				'withdraws' => array
+				'withdrawals' => array
 					(
-						'slugid' => 'withdraws',
-						'title' => 'Withdraws',
+						'slugid' => 'withdrawals',
+						'title' => 'Withdrawals',
 						'parent' => 'owner-equity',
 						'sign' => -1,
 						'usable' => true,
