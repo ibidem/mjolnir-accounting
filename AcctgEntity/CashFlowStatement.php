@@ -15,11 +15,15 @@ class AcctgEntity_CashFlowStatement extends \app\Instantiatable
 	/** @var array */
 	protected $group = null;
 
+	/** @var array */
+	protected $report = null;
+
 	/**
 	 * @return static
 	 */
 	static function instance(array $conf = null, $group = null)
 	{
+		/** @var AcctgEntity_CashFlowStatement $i */
 		$i = parent::instance();
 
 		$i->conf = $conf;
@@ -90,16 +94,15 @@ class AcctgEntity_CashFlowStatement extends \app\Instantiatable
 		$cashflow_statement = [];
 
 		$taccounts_table = \app\AcctgTAccountLib::table();
-		$depreciation_types = \implode(',', \app\AcctgTAccountTypeLib::inferred_types_by_name('depreciation'));
+		$depreciation_types = \implode(',', \app\AcctgTAccountTypeLib::relatedtypes(\app\AcctgTAccountTypeLib::named('depreciation')));
 
-		foreach ($this_years_balance['data'] as $cat => $entry)
+		foreach (\array_keys($conf['breakdown']) as $cat)
 		{
 			// We start at net income/loss
 			// ---------------------------
 
 			$cashflow_statement[$cat] = array
 				(
-
 					'variation' => [],                                           # increase/decrese raw information
 				// "Operating Activities"
 					'net_earnings' => $income_statement[$cat],                   # net income/loss
@@ -122,26 +125,58 @@ class AcctgEntity_CashFlowStatement extends \app\Instantiatable
 			// We create a increase/decrease column
 			// ------------------------------------
 
-			$accts = \array_unique
+			$startdate = null;
+			$enddate = null;
+			$acct_balance_sql = \app\SQL::prepare
 				(
-					\array_merge
-						(
-							\array_keys($last_years_balance['data'][$cat]),
-							\array_keys($this_years_balance['data'][$cat])
-						)
-				);
+					__METHOD__.':acct-balance',
+					'
+						SELECT op.taccount,
+							   SUM(op.amount_value * op.type) total
+
+						  FROM `'.\app\AcctgTransactionOperationLib::table().'` op
+
+						  JOIN `'.\app\AcctgTransactionLib::table().'` tr
+							ON tr.id = op.transaction
+
+						 WHERE tr.group <=> :group
+						   AND unix_timestamp(tr.date) >= unix_timestamp(:start_date)
+						   AND unix_timestamp(tr.date) < unix_timestamp(:end_date)
+
+						 GROUP BY op.taccount
+						 -- debug
+					'
+				)
+				->num(':group', $this->group)
+				->bindstr(':start_date', $startdate)
+				->bindstr(':end_date', $enddate);
+
+			$startdate = \app\AcctgTransactionLib::startoftime()->format('Y-m-d');
+			$pivot = clone $conf['breakdown'][$cat]['to'];
+			$enddate = clone $pivot;
+			$enddate->modify('-1 year');
+			$enddate = $enddate->format('Y-m-d');
+			$prev_year_accts = \app\Arr::gatherkeys($acct_balance_sql->run()->fetch_all(), 'taccount', 'total');
+
+			$enddate = $pivot->format('Y-m-d');
+			$this_year_accts = \app\Arr::gatherkeys($acct_balance_sql->run()->fetch_all(), 'taccount', 'total');
+
+			$accts = \array_unique(\array_merge(\array_keys($prev_year_accts), \array_keys($this_year_accts)));
 
 			foreach ($accts as $acct)
 			{
-				isset($last_years_balance['data'][$cat][$acct]) or $last_years_balance['data'][$cat][$acct] = 0;
-				isset($this_years_balance['data'][$cat][$acct]) or $this_years_balance['data'][$cat][$acct] = 0;
-				$cashflow_statement[$cat]['variation'][$acct] = ($this_years_balance['data'][$cat][$acct] - $last_years_balance['data'][$cat][$acct]) * \app\AcctgTAccountLib::sign($acct);
+				isset($prev_year_accts[$acct]) or $prev_year_accts[$acct] = 0;
+				isset($this_year_accts[$acct]) or $this_year_accts[$acct] = 0;
+				$cashflow_statement[$cat]['variation'][$acct]
+					= ($this_year_accts[$acct] - $prev_year_accts[$acct])
+					* \app\AcctgTAccountLib::treesign($acct)
+					* (\app\AcctgTAccountTypeLib::is_equity_acct($acct) ? -1 : +1);
 			}
 
 			// Add depreciation accounts
 			// -------------------------
 
-			$depereciation_accts = \app\SQL::prepare
+			$depreciation_accts = \app\SQL::prepare
 				(
 					__METHOD__,
 					"
@@ -158,11 +193,11 @@ class AcctgEntity_CashFlowStatement extends \app\Instantiatable
 
 			// calculate total
 			$depreciation_adjust_cents = 0;
-			foreach ($depereciation_accts as $entry)
+			foreach ($depreciation_accts as $entry)
 			{
 				if (isset($cashflow_statement[$cat]['variation'][$entry['id']]))
 				{
-					$depreciation_adjust_cents -= \intval($cashflow_statement[$cat]['variation'][$entry['id']] * 100) * \app\AcctgTAccountLib::sign($entry['id']);
+					$depreciation_adjust_cents -= \intval($cashflow_statement[$cat]['variation'][$entry['id']] * 100) * \app\AcctgTAccountLib::treesign($entry['id']);
 				}
 			}
 
@@ -181,8 +216,8 @@ class AcctgEntity_CashFlowStatement extends \app\Instantiatable
 			#
 
 			// get all current assets accounts
-			$current_assets_types = \app\AcctgTAccountTypeLib::inferred_types_by_name('current-assets');
-			$current_liabilities_types = \app\AcctgTAccountTypeLib::inferred_types_by_name('current-liabilities');
+			$current_assets_types = \app\AcctgTAccountTypeLib::relatedtypes(\app\AcctgTAccountTypeLib::named('current-assets'));
+			$current_liabilities_types = \app\AcctgTAccountTypeLib::relatedtypes(\app\AcctgTAccountTypeLib::named('current-liabilities'));
 
 			foreach ($cashflow_statement[$cat]['variation'] as  $acct => $val)
 			{
@@ -246,7 +281,7 @@ class AcctgEntity_CashFlowStatement extends \app\Instantiatable
 			// --------------------
 
 			// get all current assets accounts
-			$longterm_assets_types = \app\AcctgTAccountTypeLib::inferred_types_by_name('long-term-assets');
+			$longterm_assets_types = \app\AcctgTAccountTypeLib::relatedtypes(\app\AcctgTAccountTypeLib::named('long-term-assets'));
 
 			foreach ($cashflow_statement[$cat]['variation'] as  $acct => $val)
 			{
@@ -282,8 +317,8 @@ class AcctgEntity_CashFlowStatement extends \app\Instantiatable
 			// --------------------
 
 			// get all current assets accounts
-			$withdrawl_types = \app\AcctgTAccountTypeLib::inferred_types_by_name('withdrawals');
-			$ownerequity_types = \app\AcctgTAccountTypeLib::inferred_types_by_name('owner-equity');
+			$withdrawl_types = \app\AcctgTAccountTypeLib::relatedtypes(\app\AcctgTAccountTypeLib::named('withdrawals'));
+			$ownerequity_types = \app\AcctgTAccountTypeLib::relatedtypes(\app\AcctgTAccountTypeLib::named('owner-equity'));
 			$investment_types = \array_diff($ownerequity_types, $withdrawl_types);
 
 			foreach ($cashflow_statement[$cat]['variation'] as  $acct => $val)
@@ -312,13 +347,15 @@ class AcctgEntity_CashFlowStatement extends \app\Instantiatable
 				}
 			}
 
-			// perform check with cash; cash must be equal to the total of all 3 activities
-			// combined; any difference is perceived as an operational error and the statement
-			// will be promptly rejected though an NotApplicable exception
+			// perform check with cash; cash must be equal to the total of all
+			// 3 activities combined; any difference is perceived as an
+			// operational error and the statement will be promptly rejected
+			// though an NotApplicable exception
 
 			// perform cash total
 			$cash_total_cents = 0;
-			$cash_types = \app\AcctgTAccountTypeLib::inferred_types_by_name('cash');
+			$cash_types = \app\AcctgTAccountTypeLib::relatedtypes(\app\AcctgTAccountTypeLib::named('cash'));
+
 			foreach ($cashflow_statement[$cat]['variation'] as  $acct => $val)
 			{
 				$taccount = \app\AcctgTAccountLib::entry($acct);
@@ -362,15 +399,19 @@ class AcctgEntity_CashFlowStatement extends \app\Instantiatable
 			$check_sum = $operations_total_cents + $investing_total_cents + $financing_total_cents;
 			if ($cash_total_cents != $check_sum)
 			{
-//				throw new \app\Exception_NotApplicable('Correctness checks filed. Report has been rejected for being incorrect. This may be do to an error in the system or your accounts. Please contact an administrator or technical support to help resolve the issue.');
+				throw new \app\Exception_NotApplicable('Correctness checks failed. Cash Flow Statement has been rejected for being incorrect (expected cash flow '.($cash_total_cents / 100).', but statement showed '.($check_sum / 100).'). This may be do to an error in the system or your accounts. Please contact an administrator or technical support to help resolve the issue.');
 			}
 		}
 
-		// Category inversion
-		// ------------------
+		$this->report['data'] = $this->category_inversion($cashflow_statement);
 
-		# we need to move the category inside to comply with how the system
-		# deals with data-breakdowns in all other circumstances
+		return $this;
+	}
+
+	protected function category_inversion($cashflow_statement)
+	{
+		// we need to move the category inside to comply with how the system
+		// deals with data-breakdowns in all other circumstances
 
 		$reportdata = array
 			(
@@ -405,6 +446,7 @@ class AcctgEntity_CashFlowStatement extends \app\Instantiatable
 		// Operating Activities
 		$reportdata['operating']['net_earnings'] = [ $col => $cashflow_statement[$col]['net_earnings']];
 		$reportdata['operating']['depreciation'] = [ $col => $cashflow_statement[$col]['depreciation']];
+
 		foreach ($cashflow_statement[$col]['reconciliation'] as $adjustment)
 		{
 			$reportdata['operating']['reconciliation'][] = [ $col => $adjustment ];
@@ -430,9 +472,7 @@ class AcctgEntity_CashFlowStatement extends \app\Instantiatable
 			$reportdata['financing']['outflows'][] = [ $col => $adjustment ];
 		}
 
-		$this->report['data'] = $reportdata;
-
-		return $this;
+		return $reportdata;
 	}
 
 } # class

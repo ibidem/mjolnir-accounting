@@ -32,7 +32,14 @@ trait Trait_Model_AcctgCommonLib
 			->run()
 			->fetch_all();
 
-		return \app\Arr::intmul($entries, 'sign');
+		try
+		{
+			return \app\Arr::intmul($entries, 'sign');
+		}
+		catch (\Exception $e)
+		{
+			throw new \app\Exception("Failed computing rootsign for [$entity].");
+		}
 	}
 
 	/**

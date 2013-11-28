@@ -175,7 +175,7 @@ class AcctgReport_CashFlowStatement extends \app\AcctgReport
 
 		$financing_outflows = $financing_activities->newcategory('Outflows');
 
-		foreach ($reportdata['financing']['inflows'] as $adjustment)
+		foreach ($reportdata['financing']['outflows'] as $adjustment)
 		{
 			$taccount = \app\AcctgTAccountLib::entry($adjustment[$cat]['taccount']);
 

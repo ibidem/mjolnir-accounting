@@ -26,7 +26,14 @@ class AcctgTAccountLib
 
 	static function treesign($taccount)
 	{
-		return \app\AcctgTAccountTypeLib::rootsign(static::entry($taccount)['type']) * static::rootsign($taccount);
+		try
+		{
+			return \app\AcctgTAccountTypeLib::rootsign(static::entry($taccount)['type']) * static::rootsign($taccount);
+		}
+		catch (\Exception $e)
+		{
+			throw new \app\Exception("Failed computing treesign for [$taccount]");
+		}
 	}
 
 	/**

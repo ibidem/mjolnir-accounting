@@ -77,7 +77,8 @@ class AcctgEntity_IncomeStatement extends \app\Instantiatable
 							ON tr.id = op.transaction
 
 						 WHERE tr.group <=> :group
-						   AND tr.date BETWEEN :start_date AND :end_date
+						   AND unix_timestamp(tr.date) >= unix_timestamp(:start_date)
+						   AND unix_timestamp(tr.date) < unix_timestamp(:end_date)
 
 						 GROUP BY op.taccount
 					'

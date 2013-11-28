@@ -185,8 +185,8 @@ class AcctgEntity_BalanceSheetTest extends \app\PHPUnit_Framework_AcctgTestCase
 						(
 							'test' => array
 								(
-									'from' => \date_create('2012-10-01'),
-									'to' => \date_create('2013-10-01')
+									'from' => \app\AcctgTransactionLib::startoftime(),
+									'to' => \date_create('2013-01-01')
 								)
 						)
 				],
@@ -196,9 +196,59 @@ class AcctgEntity_BalanceSheetTest extends \app\PHPUnit_Framework_AcctgTestCase
 		$this->assertEquals
 			(
 				[
-					'assets' => [],
+					'assets' => [ $cash => 5000 ],
+					'capital' => 5000,
+					'liabilities' => [],
+				],
+				$balance_sheet->run()->report()['data']['test']
+			);
+
+		$balance_sheet = \app\AcctgEntity_BalanceSheet::instance
+			(
+				[
+					'breakdown' => array
+					(
+						'test' => array
+						(
+							'from' => \app\AcctgTransactionLib::startoftime(),
+							'to' => \date_create('2013-12-01')
+						)
+					)
+				],
+				null
+			);
+
+		$this->assertEquals
+			(
+				[
+					'assets' => [ $cash => 6000 ],
 					'capital' => 6000,
 					'liabilities' => [],
+				],
+				$balance_sheet->run()->report()['data']['test']
+			);
+
+		$balance_sheet = \app\AcctgEntity_BalanceSheet::instance
+			(
+				[
+					'breakdown' => array
+					(
+						'test' => array
+						(
+							'from' => \app\AcctgTransactionLib::startoftime(),
+							'to' => \date_create('2015-01-01')
+						)
+					)
+				],
+				null
+			);
+
+		$this->assertEquals
+			(
+				[
+					'assets' => [ 6 => 6000 ],
+					'liabilities' => [],
+					'capital' => 6000
 				],
 				$balance_sheet->run()->report()['data']['test']
 			);

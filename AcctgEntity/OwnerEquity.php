@@ -56,8 +56,6 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 		$report = &$this->report;
 		$conf = &$this->conf;
 
-		\var_dump($conf);
-
 		// set generation time
 		$report['timestamp'] = \date_create();
 
@@ -158,17 +156,29 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 						  JOIN `'.\app\AcctgTaccountTypeLib::table().'` type
 							ON type.id = taccount.type
 
-						 WHERE tr.date >= :from
-						   AND tr.date < :to
+						 WHERE unix_timestamp(tr.date) >= unix_timestamp(:from)
+						   AND unix_timestamp(tr.date) < unix_timestamp(:to)
 						   AND tr.group <=> :group
-						   AND type.lft >= :investments_lft
-						   AND type.rgt <= :investments_rgt
+						   AND
+						    (
+								(
+								    type.lft >= :investments_lft
+								    AND type.rgt <= :investments_rgt
+							    )
+							    OR
+							    (
+							        type.lft >= :capital_stock_lft
+								    AND type.rgt <= :capital_stock_rgt
+							    )
+							)
 
 						 GROUP BY taccount.id
 					'
 				)
 				->num(':investments_lft', $investments_type['lft'])
 				->num(':investments_rgt', $investments_type['rgt'])
+				->num(':capital_stock_lft', $capitalstock_type['lft'])
+				->num(':capital_stock_rgt', $capitalstock_type['rgt'])
 				->num(':group', $this->group)
 				->date(':from', $cnf['from']->format('Y-m-d'))
 				->date(':to', $cnf['to']->format('Y-m-d'))

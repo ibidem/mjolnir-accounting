@@ -20,7 +20,7 @@ class AcctgTransactionLib
 	}
 
 	/**
-	 * @return string date of first transaction
+	 * @return \DateTime date of first transaction
 	 */
 	static function startoftime()
 	{

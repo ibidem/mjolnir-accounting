@@ -85,7 +85,7 @@ class AcctgEntity_BalanceSheet extends \app\Instantiatable
 						 GROUP BY op.taccount
 					'
 				)
-				->num(':start_date', $cnf['from']->format('Y-m-d H:i:s'))
+				->num(':start_date', \app\AcctgTransactionLib::startoftime()->format('Y-m-d H:i:s'))
 				->num(':end_date', $cnf['to']->format('Y-m-d H:i:s'))
 				->num(':group', $this->group)
 				->run()
@@ -126,6 +126,28 @@ class AcctgEntity_BalanceSheet extends \app\Instantiatable
 		}
 
 		$this->report['data'] = $totals;
+
+		// Check Result Integrity
+		// ----------------------
+
+		foreach ($totals as $data)
+		{
+			$checksum = 0;
+			foreach ($data['assets'] as $value)
+			{
+				$checksum += \intval($value * 100);
+			}
+			foreach ($data['liabilities'] as $value)
+			{
+				$checksum -= \intval($value * 100);
+			}
+			$checksum -= \intval($data['capital'] * 100);
+
+			if ($checksum != 0)
+			{
+				 throw new \app\Exception_NotApplicable('Correctness checks failed. Balance Sheet has been rejected for being incorrect. This may be do to an error in the system or your accounts. Please contact an administrator or technical support to help resolve the issue.');;
+			}
+		}
 
 		return $this;
 	}
