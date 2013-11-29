@@ -68,7 +68,7 @@ class AcctgTAccountTypeLib
 	/**
 	 * @return array sub types
 	 */
-	static function relatedtypes($root)
+	static function relatedtypes($root_id)
 	{
 		$tabledata = static::statement
 			(
@@ -84,7 +84,7 @@ class AcctgTAccountTypeLib
 					   AND entry.rgt <= ref.rgt
 				'
 			)
-			->num(':target', $root)
+			->num(':target', $root_id)
 			->run()
 			->fetch_all();
 
