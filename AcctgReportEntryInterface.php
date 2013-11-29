@@ -17,4 +17,84 @@ interface AcctgReportEntryInterface extends Renderable, Meta
 	 */
 	function render($indent = null);
 
+	/**
+	 * @return string
+	 */
+	function title();
+
+	/**
+	 * @return static $this
+	 */
+	function totalstitle_is($title);
+
+	/**
+	 * @return static $this
+	 */
+	function totalstitle($title);
+
+	/**
+	 * @return static $this
+	 */
+	function displayclass_is($class);
+
+	/**
+	 * @return string
+	 */
+	function displayclass();
+
+	/**
+	 * Add sub entry.
+	 *
+	 * @return static $this
+	 */
+	function addentry(AcctgReportEntryInterface $entry);
+
+	/**
+	 * Adds a data entry via raw input. The method will generate a
+	 * AcctgReportDataInterface type entry and
+	 *
+	 * @return AcctgReportDataInterface
+	 */
+	function newdataentry(array $data);
+
+	/**
+	 * @return array
+	 */
+	function &datahandlers();
+
+	/**
+	 * @return array
+	 */
+	function datahandlers_array(array $datahandlers = null);
+
+	/**
+	 * @return array
+	 */
+	function appendhandler($key, $handler);
+
+	/**
+	 * @return array
+	 */
+	function &calculators();
+
+	/**
+	 * @return array
+	 */
+	function calculators_array(array $calculators = null);
+
+	/**
+	 * @return array
+	 */
+	function addcalculator($key, $handler);
+
+	/**
+	 * @return array
+	 */
+	function totals();
+
+	/**
+	 * @return AcctgReportEntryInterface[]
+	 */
+	function entries();
+
 } # interface

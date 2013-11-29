@@ -10,7 +10,7 @@
 class AcctgReport_IncomeStatement extends \app\AcctgReport
 {
 	/**
-	 * @return static $this
+	 * @return static
 	 */
 	static function instance($options = null, $group = null)
 	{
@@ -35,18 +35,35 @@ class AcctgReport_IncomeStatement extends \app\AcctgReport
 	 */
 	function run()
 	{
-		// set generation time
-		$this->set('timestamp', \time());
-
 		// create root category
 		$this->reportview = \app\AcctgReportCategory::instance();
 		$this->reportview->nototals();
+
+		$acctg_input = ['breakdown' => []];
 
 		// Parse report settings
 		// ---------------------
 
 		list($date_from, $date_to) = $this->calculate_interval();
 		list($keys, $breakdown) = $this->calculate_breakdown($date_from, $date_to, $this->reportview);
+
+		// Calculate Report Data
+		// ---------------------
+
+		foreach ($breakdown as $key => &$conf)
+		{
+			$conf['interval']['from'] = \date_create($conf['interval']['from']);
+			$conf['interval']['to'] = \date_create($conf['interval']['to']);
+			$acctg_input['breakdown'][$key] = $conf['interval'];
+		}
+
+		$entity = \app\AcctgEntity_IncomeStatement::instance($acctg_input, $this->get('group', null));
+		$result = $entity->run()->report();
+
+		$totals = $result['data'];
+
+		// set generation time
+		$this->set('timestamp', $result['timestamp']);
 
 		// Add report headers
 		// ------------------
@@ -57,73 +74,30 @@ class AcctgReport_IncomeStatement extends \app\AcctgReport
 			$this->headers[] = $segment['title'];
 		}
 
-		// Retrieve entries
-		// ----------------
-
-		foreach ($breakdown as $key => $conf)
-		{
-			if ($conf['interval'] === null)
-			{
-				continue;
-			}
-
-			$sql_totals = \app\SQL::prepare
-				(
-					__METHOD__,
-					'
-						SELECT op.taccount,
-							   SUM(op.amount_value * op.type) total
-
-						  FROM `'.\app\AcctgTransactionOperationLib::table().'` op
-
-						  JOIN `'.\app\AcctgTransactionLib::table().'` tr
-							ON tr.id = op.transaction
-
-						 WHERE tr.group <=> :group
-						   AND tr.date BETWEEN :start_date AND :end_date
-
-						 GROUP BY op.taccount
-					'
-				)
-				->date(':start_date', $conf['interval']['from'])
-				->date(':end_date', $conf['interval']['to'])
-				->num(':group', $this->get('group', null))
-				->run()
-				->fetch_all();
-
-			foreach ($sql_totals as &$entry)
-			{
-				$entry['type'] = \app\AcctgTAccountTypeLib::typefortaccount($entry['taccount']);
-				$entry['total'] = \intval(\floatval($entry['total']) * 100) * \app\AcctgTAccountTypeLib::sign($entry['type']) * \app\AcctgTAccountLib::sign($entry['taccount']) / 100;
-			}
-
-			$totals[$key] = \app\Arr::gatherkeys($sql_totals, 'taccount', 'total');
-		}
-
 		// Resolve Income
 		// --------------
 
-		$assetstype = \app\AcctgTAccountTypeLib::typebyname('revenue');
-		$asset_taccounts = \app\AcctgTAccountLib::tree_hierarchy
+		$revenuetypes = \app\AcctgTAccountTypeLib::relatedtypes(\app\AcctgTAccountTypeLib::named('revenue'));
+		$income_taccounts = \app\AcctgTAccountLib::tree_hierarchy
 			(
 				null, null, 0,
 				null,
 				[
 					'entry.group' => $this->get('group', null),
-					'entry.type' => [ 'in' => \app\AcctgTAccountTypeLib::inferred_types($assetstype) ],
+					'entry.type' => [ 'in' => $revenuetypes ],
 				]
 			);
 
-		$refs_asset_taccounts = \app\Arr::refs_from($asset_taccounts, 'id', 'subentries');
+		$refs_income_accounts = \app\Arr::refs_from($income_taccounts, 'id', 'subentries');
 
-		foreach ($refs_asset_taccounts as &$taccount)
+		foreach ($refs_income_accounts as &$taccount)
 		{
 			foreach ($keys as $key)
 			{
-				if (isset($totals[$key][$taccount['id']]))
+				if (isset($totals[$key]['income'][$taccount['id']]))
 				{
 					// we multiply by -1 to account for Cr/Dr inversion
-					$taccount[$key] = \floatval($totals[$key][$taccount['id']]) * (-1);
+					$taccount[$key] = \floatval($totals[$key]['income'][$taccount['id']]);
 				}
 				else # no total (ie. no operations involving the taccount exist)
 				{
@@ -137,20 +111,20 @@ class AcctgReport_IncomeStatement extends \app\AcctgReport
 		$this->integrate_taccounts
 			(
 				$incomeview,
-				$asset_taccounts
+				$income_taccounts
 			);
 
 		// Resolve Expenses
 		// ----------------
 
-		$expensestype = \app\AcctgTAccountTypeLib::typebyname('expenses');
+		$expensestypes = \app\AcctgTAccountTypeLib::relatedtypes(\app\AcctgTAccountTypeLib::named('expenses'));
 		$expense_taccounts = \app\AcctgTAccountLib::tree_hierarchy
 			(
 				null, null, 0,
 				null,
 				[
 					'entry.group' => $this->get('group', null),
-					'entry.type' => [ 'in' => \app\AcctgTAccountTypeLib::inferred_types($expensestype) ],
+					'entry.type' => [ 'in' => $expensestypes ],
 				]
 			);
 
@@ -160,10 +134,10 @@ class AcctgReport_IncomeStatement extends \app\AcctgReport
 		{
 			foreach ($keys as $key)
 			{
-				if (isset($totals[$key][$taccount['id']]))
+				if (isset($totals[$key]['expenses'][$taccount['id']]))
 				{
 					// we multiply by -1 to account for Cr/Dr inversion
-					$taccount[$key] = \floatval($totals[$key][$taccount['id']]) * (-1);
+					$taccount[$key] = \floatval($totals[$key]['expenses'][$taccount['id']]);
 				}
 				else # no total (ie. no operations involving the taccount exist)
 				{
@@ -191,7 +165,7 @@ class AcctgReport_IncomeStatement extends \app\AcctgReport
 
 		foreach ($expenseview->totals() as $key => $total)
 		{
-			$nettotal[$key] -= \intval($total * 100);
+			$nettotal[$key] += \intval($total * 100);
 		}
 
 		foreach ($nettotal as $key => $total)

@@ -32,12 +32,16 @@
 
 	.acctg-journal-table .acctg-journal-table--debit {
 		width: 1%;
-		white-space: nowrap
+		white-space: nowrap;
+		text-align: right;
+		padding: 0 10px;
 	}
 
 	.acctg-journal-table .acctg-journal-table--credit {
 		width: 1%;
-		white-space: nowrap
+		white-space: nowrap;
+		text-align: right;
+		padding: 0 10px;
 	}
 
 	.acctg-journal-table .acctg-journal-table--debit-acct {

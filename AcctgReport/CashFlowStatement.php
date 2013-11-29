@@ -10,7 +10,7 @@
 class AcctgReport_CashFlowStatement extends \app\AcctgReport
 {
 	/**
-	 * @return static $this
+	 * @return static
 	 */
 	static function instance($options = null, $group = null)
 	{
@@ -35,18 +35,40 @@ class AcctgReport_CashFlowStatement extends \app\AcctgReport
 	 */
 	function run()
 	{
-		// set generation time
-		$this->set('timestamp', \time());
-
 		// create root category
-		$this->reportview = \app\AcctgReportCategory::instance('Ordinary Income/Expense');
+		$this->reportview = \app\AcctgReportCategory::instance('Cash Flow Statement');
 		$this->reportview->nototals();
+
+		$acctg_input = ['breakdown' => []];
 
 		// Parse report settings
 		// ---------------------
 
 		list($date_from, $date_to) = $this->calculate_interval();
 		list($keys, $breakdown) = $this->calculate_breakdown($date_from, $date_to, $this->reportview);
+
+		// we need to adjust the breakdown to reflect this
+		foreach ($breakdown as $key => &$conf)
+		{
+			if ($conf['interval'] !== null)
+			{
+				$conf['interval']['from'] = \app\AcctgTransactionLib::startoftime();
+				$conf['title'] = $conf['interval']['to'];
+				$conf['interval']['to'] = \date_create($conf['interval']['to']);
+			}
+
+			$acctg_input['breakdown'][$key] = $conf['interval'];
+		}
+
+		// Calculate Report Data
+		// ---------------------
+
+		$entity = \app\AcctgEntity_CashFlowStatement::instance($acctg_input, $this->get('group', null));
+		$report = $entity->run()->report();
+		$reportdata = &$report['data'];
+
+		// set generation time
+		$this->set('timestamp', $report['timestamp']);
 
 		// Add report headers
 		// ------------------
@@ -57,154 +79,113 @@ class AcctgReport_CashFlowStatement extends \app\AcctgReport
 			$this->headers[] = $segment['title'];
 		}
 
-		// Retrieve entries
-		// ----------------
+		$cat = $keys[0];
 
-		foreach ($breakdown as $key => $conf)
+		// Operating Activities
+		// --------------------
+
+		$operating_activities = $this->reportview->newcategory('Operating Activities');
+
+		// add net income
+		$operating_activities->newdataentry
+			(
+				[
+					'title' => 'Net Earnings',
+					$cat => $reportdata['operating']['net_earnings'][$cat]
+				]
+			);
+
+		// add depreciation
+		$operating_activities->newdataentry
+			(
+				[
+					'title' => 'Depreciation',
+					$cat => $reportdata['operating']['depreciation'][$cat]
+				]
+			);
+
+		// add adjustments
+		foreach ($reportdata['operating']['reconciliation'] as $adjustment)
 		{
-			if ($conf['interval'] === null)
-			{
-				continue;
-			}
+			$taccount = \app\AcctgTAccountLib::entry($adjustment[$cat]['taccount']);
 
-			$sql_totals = \app\SQL::prepare
+			$operating_activities->newdataentry
 				(
-					__METHOD__,
-					'
-						SELECT op.taccount,
-							   SUM(op.amount_value * op.type) total
-
-						  FROM `'.\app\AcctgTransactionOperationLib::table().'` op
-
-						  JOIN `'.\app\AcctgTransactionLib::table().'` tr
-							ON tr.id = op.transaction
-
-						 WHERE tr.group <=> :group
-						   AND tr.date BETWEEN :start_date AND :end_date
-
-						 GROUP BY op.taccount
-					'
-				)
-				->date(':start_date', $conf['interval']['from'])
-				->date(':end_date', $conf['interval']['to'])
-				->num(':group', $this->get('group', null))
-				->run()
-				->fetch_all();
-
-			foreach ($sql_totals as $entry)
-			{
-				$entry['type'] = \app\AcctgTAccountTypeLib::typefortaccount($entry['taccount']);
-				$entry['total'] = $entry['total'] * \app\AcctgTAccountTypeLib::sign($entry['type']) * \app\AcctgTAccountLib::sign($entry['taccount']);
-			}
-
-			$totals[$key] = \app\Arr::gatherkeys($sql_totals, 'taccount', 'total');
+					[
+						'title' => ($adjustment[$cat]['type'] == 'decrese' ? 'Decrease in ' : 'Increase in ') . $taccount['title'],
+						$cat => $adjustment[$cat]['value']
+					]
+				);
 		}
 
-		// Resolve Income
-		// --------------
+		// Investment Activities
+		// ---------------------
 
-		$assetstype = \app\AcctgTAccountTypeLib::typebyname('current-assets');
-		$asset_taccounts = \app\AcctgTAccountLib::tree_hierarchy
-			(
-				null, null, 0,
-				null,
-				[
-					'entry.group' => $this->get('group', null),
-					'entry.type' => [ 'in' => \app\AcctgTAccountTypeLib::inferred_types($assetstype) ],
-				]
-			);
+		$investment_activities = $this->reportview->newcategory('Investment Activities');
 
-		$refs_asset_taccounts = \app\Arr::refs_from($asset_taccounts, 'id', 'subentries');
+		$investment_inflows = $investment_activities->newcategory('Inflows');
 
-		foreach ($refs_asset_taccounts as &$taccount)
+		foreach ($reportdata['investing']['inflows'] as $adjustment)
 		{
-			foreach ($keys as $key)
-			{
-				if (isset($totals[$key][$taccount['id']]))
-				{
-					$taccount[$key] = \floatval($totals[$key][$taccount['id']]);
-				}
-				else # no total (ie. no operations involving the taccount exist)
-				{
-					$taccount[$key] = 0.00;
-				}
-			}
+				$taccount = \app\AcctgTAccountLib::entry($adjustment[$cat]['taccount']);
+
+				$investment_inflows->newdataentry
+					(
+						[
+							'title' => $taccount['title'],
+							$cat => $adjustment[$cat]['value']
+						]
+					);
 		}
 
-		$incomeview = $this->reportview->newcategory('Income');
+		$investment_outflows = $investment_activities->newcategory('Outflows');
 
-		$this->integrate_taccounts
-			(
-				$incomeview,
-				$asset_taccounts
-			);
-
-		// Resolve Expenses
-		// ----------------
-
-		$expensestype = \app\AcctgTAccountTypeLib::typebyname('expenses');
-		$expense_taccounts = \app\AcctgTAccountLib::tree_hierarchy
-			(
-				null, null, 0,
-				null,
-				[
-					'entry.group' => $this->get('group', null),
-					'entry.type' => [ 'in' => \app\AcctgTAccountTypeLib::inferred_types($expensestype) ],
-				]
-			);
-
-		$refs_expenses_taccounts = \app\Arr::refs_from($expense_taccounts, 'id', 'subentries');
-
-		foreach ($refs_expenses_taccounts as &$taccount)
+		foreach ($reportdata['investing']['outflows'] as $adjustment)
 		{
-			foreach ($keys as $key)
-			{
-				if (isset($totals[$key][$taccount['id']]))
-				{
-					// we multiply by -1 to account for Cr/Dr inversion
-					$taccount[$key] = \floatval($totals[$key][$taccount['id']]) * (-1);
-				}
-				else # no total (ie. no operations involving the taccount exist)
-				{
-					$taccount[$key] = 0.00;
-				}
-			}
+			$taccount = \app\AcctgTAccountLib::entry($adjustment[$cat]['taccount']);
+
+			$investment_outflows->newdataentry
+				(
+					[
+						'title' => $taccount['title'],
+						$cat => $adjustment[$cat]['value']
+					]
+				);
 		}
 
-		$expenseview = $this->reportview->newcategory('Expenses');
+		// Investment Activities
+		// ---------------------
 
-		$this->integrate_taccounts
-			(
-				$expenseview,
-				$expense_taccounts
-			);
+		$financing_activities = $this->reportview->newcategory('Financing Activities');
 
-		// Totals
-		// ------
+		$financing_inflows = $financing_activities->newcategory('Inflows');
 
-		$nettotal = [];
-		foreach ($incomeview->totals() as $key => $total)
+		foreach ($reportdata['financing']['inflows'] as $adjustment)
 		{
-			$nettotal[$key] = \intval($total * 100);
+			$taccount = \app\AcctgTAccountLib::entry($adjustment[$cat]['taccount']);
+
+			$financing_inflows->newdataentry
+				(
+					[
+						'title' => $taccount['title'],
+						$cat => $adjustment[$cat]['value']
+					]
+				);
 		}
 
-		foreach ($expenseview->totals() as $key => $total)
-		{
-			$nettotal[$key] -= \intval($total * 100);
-		}
+		$financing_outflows = $financing_activities->newcategory('Outflows');
 
-		foreach ($nettotal as $key => $total)
+		foreach ($reportdata['financing']['outflows'] as $adjustment)
 		{
-			$nettotal[$key] = $nettotal[$key] / 100;
-		}
+			$taccount = \app\AcctgTAccountLib::entry($adjustment[$cat]['taccount']);
 
-		if ($nettotal['total'] >= 0)
-		{
-			$this->reportview->newdataentry($nettotal + ['title' => '<b>Net Income</b>']);
-		}
-		else # balance < 0
-		{
-			$this->reportview->newdataentry($nettotal + ['title' => '<b>Net Loss</b>']);
+			$financing_outflows->newdataentry
+				(
+					[
+						'title' => $taccount['title'],
+						$cat => $adjustment[$cat]['value']
+					]
+				);
 		}
 
 		return $this;

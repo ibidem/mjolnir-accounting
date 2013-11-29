@@ -93,7 +93,7 @@ trait Trait_AcctgReportEntry
 	// ------------------------------------------------------------------------
 	// Nested Entries
 
-	/** @var array sub entries */
+	/** @var AcctgReportEntryInterface[] sub entries */
 	protected $nestedentries = null;
 
 	/**
@@ -123,7 +123,7 @@ trait Trait_AcctgReportEntry
 	}
 
 	/**
-	 * @return array
+	 * @return AcctgReportEntryInterface[]
 	 */
 	function entries()
 	{
@@ -142,7 +142,7 @@ trait Trait_AcctgReportEntry
 	protected $datahandlers = null;
 
 	/**
-	 * @return array
+	 * @return callable[]
 	 */
 	function &datahandlers()
 	{
@@ -150,7 +150,7 @@ trait Trait_AcctgReportEntry
 	}
 
 	/**
-	 * @return array
+	 * @return static $this
 	 */
 	function datahandlers_array(array $datahandlers = null)
 	{
@@ -159,7 +159,7 @@ trait Trait_AcctgReportEntry
 	}
 
 	/**
-	 * @return array
+	 * @return static $this
 	 */
 	function appendhandler($key, $handler)
 	{
@@ -181,7 +181,18 @@ trait Trait_AcctgReportEntry
 				case 'currency':
 					$this->datahandlers[$key] = function ($key, AcctgReportDataInterface $dataentry)
 						{
-							return '<td class="acctg-report--currency">'.\number_format($dataentry->attr($key), 2).'</td>';
+							$render = '<td class="acctg-report--currency">';
+							if ($dataentry->attr($key) < 0)
+							{
+								$render .= '<span class="acctg-negative-number">('.\number_format(-1 * $dataentry->attr($key), 2).')</span>';
+							}
+							else # positive value or 0, we dont use the -0- convention
+							{
+								$render .= \number_format($dataentry->attr($key), 2);
+							}
+
+							$render .= '</td>';
+							return $render;
 						};
 					break;
 
@@ -189,6 +200,8 @@ trait Trait_AcctgReportEntry
 					throw new \app\Exception('The data handler type ['.$handler.'] is not supported.');
 			}
 		}
+
+		return $this;
 	}
 
 	// ------------------------------------------------------------------------
@@ -206,7 +219,7 @@ trait Trait_AcctgReportEntry
 	}
 
 	/**
-	 * @return array
+	 * @return static $this
 	 */
 	function calculators_array(array $calculators = null)
 	{

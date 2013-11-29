@@ -84,6 +84,14 @@ trait Trait_AcctgContext
 		return \app\AcctgReport_IncomeStatement::instance($options, $group);
 	}
 
+	/**
+	 * @return \mjolnir\accounting\AcctgReportInterface
+	 */
+	function acctgreport_ownerequity($options, $group = null)
+	{
+		return \app\AcctgReport_OwnerEquity::instance($options, $group);
+	}
+
 	// ------------------------------------------------------------------------
 	// Acctg Collections
 
@@ -197,12 +205,17 @@ trait Trait_AcctgContext
 	protected function recusively_embed_taccount_handlers(&$taccount, $subtreekey)
 	{
 		$this->embed_taccount_handlers($taccount);
+		$taccount['balance'] = 0.00;
 		if ( ! empty($taccount[$subtreekey]))
 		{
 			foreach ($taccount[$subtreekey] as &$subtaccount)
 			{
 				$this->recusively_embed_taccount_handlers($subtaccount, $subtreekey);
 			}
+		}
+		else # leaf
+		{
+			$taccount['balance'] = \app\AcctgTAccountLib::acct_balance($taccount['id']);
 		}
 	}
 

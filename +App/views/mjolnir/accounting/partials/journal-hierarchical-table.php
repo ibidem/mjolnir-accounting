@@ -52,7 +52,11 @@
 	<? if ( ! empty($records)): ?>
 		<? foreach ($records as $year => $months): ?>
 			<? if ($year !== $last_year): ?>
-				<? $last_year = $year ?>
+				<?
+					$last_year = $year;
+					$last_month = null;
+					$last_day = null;
+				?>
 				<tbody>
 					<tr>
 						<td colspan="9"><?= $year ?></td>
@@ -65,13 +69,27 @@
 					<? foreach ($transactions as $transaction): ?>
 						<tbody class="acctg-journal-table--transaction-tbody">
 							<? $first_operation = true; ?>
-							<? foreach ($transaction['operations'] as $operation): ?>
+
+							<? foreach ($transaction['operations'] as &$op): ?>
+								<? $op['atomictype'] = AcctgTransactionOperationLib::atomictype($op) ?>
+							<? endforeach; ?>
+
+							<?
+								\usort($transaction['operations'], function ($a, $b) {
+									return $a['atomictype'] - $b['atomictype'];
+								});
+							?>
+
+							<? foreach (\array_reverse($transaction['operations']) as $operation): ?>
 								<tr>
 									<? if ($first_operation): ?>
 										<? $first_operation = false; ?>
 										<td class="acctg-journal-table--transaction-month">
 											<? if ($month !== $last_month): ?>
-												<? $last_month = $month ?>
+												<?
+													$last_month = $month;
+													$last_day = null;
+												?>
 												<?= $monthname[$month] ?>
 											<? else: # unchanged ?>
 												&nbsp;
@@ -92,7 +110,7 @@
 										<td colspan="3">&nbsp;</td>
 									<? endif; ?>
 
-									<? if ($operation['type'] == $optypes['debit']): ?>
+									<? if ($operation['atomictype'] == $optypes['debit']): ?>
 										<td class="acctg-journal-table--debit-acct">
 											<? # guarantee correct alignment; alignment has meaning ?>
 											<div style="text-align: left;">
@@ -113,6 +131,7 @@
 										<td class="acctg-journal-table--debit">&nbsp;</td>
 										<td class="acctg-journal-table--credit"><?= \app\Currency::format($operation['amount_value'], $operation['amount_type']) ?></td>
 									<? endif; ?>
+
 									<td class="acctg-journal-table--operation-note">
 										<?= $operation['note'] ?>
 									</td>

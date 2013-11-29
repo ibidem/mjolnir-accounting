@@ -68,7 +68,7 @@ abstract class AcctgReport extends \app\Instantiatable implements AcctgReportInt
 				->fetch_entry();
 
 			$date_from = \date_create($table['mindate']);
-			$date_to = \date_create($table['maxdate']);
+			$date_to = \date_create($table['maxdate'])->modify('+1 day');
 		}
 		else if ($interval === 'today')
 		{
@@ -296,7 +296,7 @@ abstract class AcctgReport extends \app\Instantiatable implements AcctgReportInt
 	/**
 	 * @return string
 	 */
-	protected function render_header()
+	function render_header()
 	{
 		$headerview = '<th class="acctg-report--placeholder">&nbsp;</th>';
 

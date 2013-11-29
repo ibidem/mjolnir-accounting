@@ -17,6 +17,7 @@ class AcctgSettings extends \app\Instantiatable
 	 */
 	static function instance()
 	{
+		/** @var AcctgSettings $i */
 		$i = parent::instance();
 
 		$account_settings = \app\Arr::gatherkeys
@@ -52,10 +53,16 @@ class AcctgSettings extends \app\Instantiatable
 
 		if ($typecheck !== false)
 		{
-			if ( ! \app\AcctgTAccountTypeLib::matchcheck($acct, $typecheck))
+			// Check for compatibility of type
+			// -------------------------------
+
+			$acct_type = \app\AcctgTAccountType::entry(\app\AcctgTAccountLib::entry($acct)['type']);
+			$target_type = \app\AcctgTAccountTypeLib::named($typecheck);
+
+			if ( ! ($target_type['lft'] <= $acct_type['lft'] && $target_type['rgt'] >= $acct_type['rgt']))
 			{
-				$slugid = \app\AcctgTAccountTypeLib::slugid_for_acct($acct);
-				throw new \app\Exception("The account [$key] has an account of incompatible type set. Expected [$typecheck] but recieved [$slugid].");
+				$acct_slugid = $acct_type['slugid'];
+				throw new \app\Exception("The account [$key] has an account of incompatible type set. Expected [$typecheck] but recieved [$acct_slugid].");
 			}
 		}
 
