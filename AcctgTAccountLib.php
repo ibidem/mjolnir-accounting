@@ -66,7 +66,7 @@ class AcctgTAccountLib
 			$sign_adjustment = +1;
 		}
 
-		return (float) \app\SQL::prepare
+		$result = (float) \app\SQL::prepare
 			(
 				__METHOD__,
 				'
@@ -77,8 +77,9 @@ class AcctgTAccountLib
 			)
 			->num(':taccount', $taccount)
 			->run()
-			->fetch_calc()
-			* $sign_adjustment;
+			->fetch_calc();
+
+		return $result * $sign_adjustment;
 	}
 
 	/**
@@ -97,7 +98,7 @@ class AcctgTAccountLib
 
 		$sign_adjustment *= static::treesign($taccount);
 
-		return (float) \app\SQL::prepare
+		$result = (float) \app\SQL::prepare
 			(
 				__METHOD__,
 				'
@@ -108,9 +109,9 @@ class AcctgTAccountLib
 			)
 			->num(':taccount', $taccount)
 			->run()
-			->fetch_calc()
-		* $sign_adjustment
-		;
+			->fetch_calc();
+
+		return $result * $sign_adjustment;
 	}
 
 	/**
