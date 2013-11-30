@@ -20,12 +20,11 @@ class AcctgTAccountTypeLib
 	{
 		$tabledata = static::statement
 			(
-				__METHOD__,
 				'
 					SELECT entry.slugid
-					 FROM `'.static::table().'` entry
+					 FROM `[table]` entry
 
-					 JOIN `'.static::table().'` ref
+					 JOIN `[table]` ref
 					   ON ref.id = :target
 
 					 WHERE entry.lft <= ref.lft
@@ -46,12 +45,11 @@ class AcctgTAccountTypeLib
 	{
 		$tabledata = static::statement
 			(
-				__METHOD__,
 				'
 					SELECT entry.id
-					 FROM `'.static::table().'` entry
+					 FROM `[table]` entry
 
-					 JOIN `'.static::table().'` ref
+					 JOIN `[table]` ref
 					   ON ref.id = :target
 
 					 WHERE entry.lft <= ref.lft
@@ -72,12 +70,11 @@ class AcctgTAccountTypeLib
 	{
 		$tabledata = static::statement
 			(
-				__METHOD__,
 				'
 					SELECT entry.id
-					 FROM `'.static::table().'` entry
+					 FROM `[table]` entry
 
-					 JOIN `'.static::table().'` ref
+					 JOIN `[table]` ref
 					   ON ref.id = :target
 
 					 WHERE entry.lft >= ref.lft
@@ -138,30 +135,26 @@ class AcctgTAccountTypeLib
 
 		return static::statement
 			(
-				__METHOD__,
 				"
-					#!info rgt -> $rgt, lft -> $lft, prt -> $prt
-
 					SELECT entry.*,
 					       (
 					           SELECT mirror.id
-					             FROM :table mirror
-					            WHERE mirror.lft < entry.lft
-				                  AND mirror.rgt > entry.rgt
-				                ORDER BY mirror.rgt - entry.rgt ASC
+					             FROM `[table]` mirror
+					            WHERE mirror.[lft] < entry.[lft]
+				                  AND mirror.[rgt] > entry.[rgt]
+				                ORDER BY mirror.[rgt] - entry.[rgt] ASC
 				                LIMIT 1
-							) AS $prt,
+							) AS [prt],
 					        (
 							    SELECT count(*)
-					            FROM `".\app\AcctgTAccountLib::table()."` taccount
-
-                                WHERE taccount.type
-					              IN (
+					              FROM `[taccouts]` taccount
+                                 WHERE taccount.type
+					               IN (
                                         SELECT enum.id
-								          FROM `".\app\AcctgTAccountTypeLib::table()."` enum
-					                     WHERE enum.lft >= entry.lft
-					                       AND enum.rgt <= entry.rgt
-								  )
+								          FROM `[taccout-types]` enum
+					                     WHERE enum.lft >= entry.[lft]
+					                       AND enum.rgt <= entry.[rgt]
+								   )
 						    ) taccountcount
 
 					FROM
@@ -169,20 +162,27 @@ class AcctgTAccountTypeLib
 
 						SELECT node.*, (COUNT(parent.id) - 1) $depthkey
 
-						  FROM :table node,
-							   :table parent
+						  FROM `[table]` node,
+							   `[table]` parent
 
-						 WHERE node.$lft BETWEEN parent.$lft AND parent.$rgt
+						 WHERE node.[lft] BETWEEN parent.[lft] AND parent.[rgt]
 
 						 GROUP BY node.id
-						 ORDER BY node.$lft
+						 ORDER BY node.[lft]
 
 					) entry
 
 					$WHERE
 					$ORDER_BY
 					LIMIT :limit OFFSET :offset
-				"
+				",
+				[
+					'[taccouts]' => \app\AcctgTAccountLib::table(),
+					'[taccout-types]' => \app\AcctgTAccountTypeLib::table(),
+					'[lft]' => $lft,
+					'[rgt]' => $rgt,
+					'[prt]' => $prt
+				]
 			)
 			->page($page, $limit, $offset)
 			->run()

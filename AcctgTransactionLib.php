@@ -26,10 +26,9 @@ class AcctgTransactionLib
 	{
 		$result = static::statement
 			(
-				__METHOD__,
 				'
 					SELECT MIN(date)
-					  FROM :table
+					  FROM `[table]`
 				'
 			)
 			->run()

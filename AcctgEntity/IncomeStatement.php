@@ -66,14 +66,13 @@ class AcctgEntity_IncomeStatement extends \app\Instantiatable
 		{
 			$sql_totals = \app\SQL::prepare
 				(
-					__METHOD__,
 					'
 						SELECT op.taccount,
 							   SUM(op.amount_value * op.type) total
 
-						  FROM `'.\app\AcctgTransactionOperationLib::table().'` op
+						  FROM `[operations]` op
 
-						  JOIN `'.\app\AcctgTransactionLib::table().'` tr
+						  JOIN `[transactions]` tr
 							ON tr.id = op.transaction
 
 						 WHERE tr.group <=> :group
@@ -81,7 +80,11 @@ class AcctgEntity_IncomeStatement extends \app\Instantiatable
 						   AND unix_timestamp(tr.date) < unix_timestamp(:end_date)
 
 						 GROUP BY op.taccount
-					'
+					',
+					[
+						'[operations]' => \app\AcctgTransactionOperationLib::table(),
+						'[transactions]' => \app\AcctgTransactionLib::table()
+					]
 				)
 				->date(':start_date', $conf['from']->format('Y-m-d H:i:s'))
 				->date(':end_date', $conf['to']->format('Y-m-d H:i:s'))

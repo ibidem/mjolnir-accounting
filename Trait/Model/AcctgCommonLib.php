@@ -16,12 +16,11 @@ trait Trait_Model_AcctgCommonLib
 	{
 		$entries = static::statement
 			(
-				__METHOD__,
 				'
 					SELECT entry.sign
-					  FROM `'.static::table().'` entry
+					  FROM `[table]` entry
 
-					  JOIN `'.static::table().'` target
+					  JOIN `[table]` target
 						ON target.id = :target
 
 				     WHERE entry.lft <= target.lft

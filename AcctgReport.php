@@ -55,13 +55,15 @@ abstract class AcctgReport extends \app\Instantiatable implements AcctgReportInt
 		{
 			$table = \app\SQL::prepare
 				(
-					__METHOD__.':find_earliest_date',
 					'
 						SELECT MIN(entry.date) mindate,
 						       MAX(entry.date) maxdate
-					      FROM `'.\app\AcctgTransactionLib::table().'` entry
+					      FROM `[transactions]` entry
 						 WHERE entry.group <=> :group
-					'
+					',
+					[
+						'[transactions]' => \app\AcctgTransactionLib::table()
+					]
 				)
 				->num(':group', $this->get('group', null))
 				->run()

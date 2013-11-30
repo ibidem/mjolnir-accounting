@@ -82,21 +82,20 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 			// retrieve all relevant capital accounts for start of year calculations
 			$sql_totals = \app\SQL::prepare
 				(
-					__METHOD__.':investments-captalstock-retained-earnings-accounts',
 					'
 						SELECT taccount.id taccount,
 							   type.id type,
 							   SUM(op.amount_value * op.type) total
 
-						  FROM `'.\app\AcctgTAccountLib::table().'` taccount
+						  FROM `[taccounts]` taccount
 
-						  JOIN `'.\app\AcctgTransactionOperationLib::table().'` op
+						  JOIN `[operations]` op
 							ON taccount.id = op.taccount
 
-						  JOIN `'.\app\AcctgTransactionLib::table().'` tr
+						  JOIN `[transactions]` tr
 							ON op.transaction = tr.id
 
-						  JOIN `'.\app\AcctgTaccountTypeLib::table().'` type
+						  JOIN `[taccount-types]` type
 							ON type.id = taccount.type
 
 						 WHERE unix_timestamp(tr.date) < unix_timestamp(:from)
@@ -111,7 +110,13 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 						   )
 
 						 GROUP BY taccount.id
-					'
+					',
+					[
+						'[taccounts]' => \app\AcctgTAccountLib::table(),
+						'[operations]' =>\app\AcctgTransactionOperationLib::table(),
+						'[transactions]' =>\app\AcctgTransactionLib::table(),
+						'[taccount-types]' =>\app\AcctgTaccountTypeLib::table()
+					]
 				)
 				->num(':capital_stock_lft', $capitalstock_type['lft'])
 				->num(':capital_stock_rgt', $capitalstock_type['rgt'])
@@ -139,21 +144,20 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 			// retrieve investment accounts
 			$sql_totals = \app\SQL::prepare
 				(
-					__METHOD__.':investments-accounts-for-the-period',
 					'
 						SELECT taccount.id taccount,
 							   type.id type,
 							   SUM(op.amount_value * op.type) total
 
-						  FROM `'.\app\AcctgTAccountLib::table().'` taccount
+						  FROM `[taccounts]` taccount
 
-						  JOIN `'.\app\AcctgTransactionOperationLib::table().'` op
+						  JOIN `[operations]` op
 							ON taccount.id = op.taccount
 
-						  JOIN `'.\app\AcctgTransactionLib::table().'` tr
+						  JOIN `[transactions]` tr
 							ON op.transaction = tr.id
 
-						  JOIN `'.\app\AcctgTaccountTypeLib::table().'` type
+						  JOIN `[taccount-types]` type
 							ON type.id = taccount.type
 
 						 WHERE unix_timestamp(tr.date) >= unix_timestamp(:from)
@@ -173,7 +177,13 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 							)
 
 						 GROUP BY taccount.id
-					'
+					',
+					[
+						'[taccounts]' => \app\AcctgTAccountLib::table(),
+						'[operations]' =>\app\AcctgTransactionOperationLib::table(),
+						'[transactions]' =>\app\AcctgTransactionLib::table(),
+						'[taccount-types]' =>\app\AcctgTaccountTypeLib::table()
+					]
 				)
 				->num(':investments_lft', $investments_type['lft'])
 				->num(':investments_rgt', $investments_type['rgt'])
@@ -233,15 +243,15 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 							   type.id type,
 							   SUM(op.amount_value * op.type) total
 
-						  FROM `'.\app\AcctgTAccountLib::table().'` taccount
+						  FROM `[taccounts]` taccount
 
-						  JOIN `'.\app\AcctgTransactionOperationLib::table().'` op
+						  JOIN `[operations]` op
 							ON taccount.id = op.taccount
 
-						  JOIN `'.\app\AcctgTransactionLib::table().'` tr
+						  JOIN `[transactions]` tr
 							ON op.transaction = tr.id
 
-						  JOIN `'.\app\AcctgTaccountTypeLib::table().'` type
+						  JOIN `[taccount-types]` type
 							ON type.id = taccount.type
 
 						 WHERE unix_timestamp(tr.date) >= unix_timestamp(:from)
@@ -251,7 +261,13 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 						   AND type.rgt <= :revenue_rgt
 
 						 GROUP BY taccount.id
-					'
+					',
+					[
+						'[taccounts]' => \app\AcctgTAccountLib::table(),
+						'[operations]' =>\app\AcctgTransactionOperationLib::table(),
+						'[transactions]' =>\app\AcctgTransactionLib::table(),
+						'[taccount-types]' =>\app\AcctgTaccountTypeLib::table()
+					]
 				)
 				->num(':revenue_lft', $draws['lft'])
 				->num(':revenue_rgt', $draws['rgt'])

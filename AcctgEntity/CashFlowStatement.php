@@ -129,14 +129,13 @@ class AcctgEntity_CashFlowStatement extends \app\Instantiatable
 			$enddate = null;
 			$acct_balance_sql = \app\SQL::prepare
 				(
-					__METHOD__.':acct-balance',
 					'
 						SELECT op.taccount,
 							   SUM(op.amount_value * op.type) total
 
-						  FROM `'.\app\AcctgTransactionOperationLib::table().'` op
+						  FROM `[operations]` op
 
-						  JOIN `'.\app\AcctgTransactionLib::table().'` tr
+						  JOIN `[transactions]` tr
 							ON tr.id = op.transaction
 
 						 WHERE tr.group <=> :group
@@ -144,8 +143,11 @@ class AcctgEntity_CashFlowStatement extends \app\Instantiatable
 						   AND unix_timestamp(tr.date) < unix_timestamp(:end_date)
 
 						 GROUP BY op.taccount
-						 -- debug
-					'
+					',
+					[
+						'[operations]' => \app\AcctgTransactionOperationLib::table(),
+						'[transactions]' => \app\AcctgTransactionLib::table(),
+					]
 				)
 				->num(':group', $this->group)
 				->bindstr(':start_date', $startdate)
@@ -178,7 +180,6 @@ class AcctgEntity_CashFlowStatement extends \app\Instantiatable
 
 			$depreciation_accts = \app\SQL::prepare
 				(
-					__METHOD__,
 					"
 						SELECT entry.*
 	                      FROM `$taccounts_table` entry

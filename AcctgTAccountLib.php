@@ -68,12 +68,14 @@ class AcctgTAccountLib
 
 		$result = (float) \app\SQL::prepare
 			(
-				__METHOD__,
 				'
 					SELECT SUM(op.amount_value * op.type)
-					  FROM `'.\app\AcctgTransactionOperationLib::table().'` op
+					  FROM `[operations]` op
 					 WHERE op.taccount = :taccount
-				'
+				',
+				[
+					'[operations]' => \app\AcctgTransactionOperationLib::table(),
+				]
 			)
 			->num(':taccount', $taccount)
 			->run()
@@ -100,12 +102,14 @@ class AcctgTAccountLib
 
 		$result = (float) \app\SQL::prepare
 			(
-				__METHOD__,
 				'
 					SELECT SUM(op.amount_value * op.type)
-					  FROM `'.\app\AcctgTransactionOperationLib::table().'` op
+					  FROM `[transactions]` op
 					 WHERE op.taccount = :taccount
-				'
+				',
+				[
+					'[transactions]' => \app\AcctgTransactionOperationLib::table(),
+				]
 			)
 			->num(':taccount', $taccount)
 			->run()
@@ -136,16 +140,19 @@ class AcctgTAccountLib
 	{
 		return (float) \app\SQL::prepare
 			(
-				__METHOD__,
 				'
 					SELECT SUM(op.amount_value * op.type * taccount.zerosum_sign)
-					  FROM `'.\app\AcctgTransactionOperationLib::table().'` op
+					  FROM `[operations]` op
 
-					  JOIN `'.\app\AcctgTAccountLib::table().'` taccount
+					  JOIN `[taccounts]` taccount
 					    ON op.taccount = taccount.id
 
 					 WHERE taccount.group <=> :group
-				'
+				',
+				[
+					'[operations]' => \app\AcctgTransactionOperationLib::table(),
+					'[taccounts]' => \app\AcctgTAccountLib::table(),
+				]
 			)
 			->num(':group', $group)
 			->run()
@@ -237,9 +244,8 @@ class AcctgTAccountLib
 
 		static::statement
 			(
-				__METHOD__,
 				'
-					UPDATE :table
+					UPDATE `[table]`
 					   SET zerosum_sign = :checksign
 					 WHERE id = :new_entry
 				'
