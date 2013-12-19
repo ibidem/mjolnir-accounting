@@ -24,6 +24,9 @@ class AcctgTAccountLib
 		return \app\AcctgTAccountTypeLib::table();
 	}
 
+	/**
+	 * @return int sign
+	 */
 	static function treesign($taccount)
 	{
 		try
@@ -191,7 +194,8 @@ class AcctgTAccountLib
 
 		$prt = static::tree_parentkey();
 		isset($input[$prt]) or $input[$prt] = null;
-		isset($input['slugid']) or $inpit['slugid'] = null;
+		! empty($input[$prt]) or $input[$prt] = null;
+		isset($input['slugid']) or $input['slugid'] = null;
 	}
 
 	/**
@@ -321,7 +325,54 @@ class AcctgTAccountLib
 			\app\SQL::begin();
 			try
 			{
+				// if parent leaf node, create "Other"
+				$parent_entry = static::entry($input['parent']);
+
+				if ($parent_entry['lft'] + 1 == $parent_entry['rgt'])
+				{
+					// Create "Other"
+					// --------------
+
+					// we create a shallow copy
+
+					$parent_entry['parent'] = static::tree_parent($parent_entry['id'], [ 'entry.group' => $parent_entry['group'] ]);
+					unset($parent_entry['id']);
+
+					$parent_entry['slugid'] = null;
+
+					unset($parent_entry['lft']);
+					unset($parent_entry['rgt']);
+					$errors = static::tree_push($parent_entry);
+
+					if ($errors !== null)
+					{
+						throw new \app\Exception('Failed to create empty copy in taccount refactoring process.');
+					}
+
+					$empty_copy = static::$last_inserted_id;
+
+					// move the old entry into the new empty equivalent one
+					static::tree_move_process($input['parent'], $empty_copy);
+
+					// update name of old parent to "Other"
+					static::statement
+						(
+							__METHOD__,
+							'
+								UPDATE :table
+								   SET title = "Other"
+								 WHERE id = :old_parent
+							'
+						)
+						->num(':old_parent', $input['parent'])
+						->run();
+
+					// make it so the move happens on the new empty parent
+					$input['parent'] = $empty_copy;
+				}
+
 				static::tree_update_process($id, $input);
+
 				\app\SQL::commit();
 			}
 			catch (\Exception $e)
@@ -409,6 +460,52 @@ class AcctgTAccountLib
 			\app\SQL::begin();
 			try
 			{
+				// if parent leaf node, create "Other"
+				$parent_entry = static::entry($input['new_parent']);
+
+				if ($parent_entry['lft'] + 1 == $parent_entry['rgt'])
+				{
+					// Create "Other"
+					// --------------
+
+					// we create a shallow copy
+
+					$parent_entry['parent'] = static::tree_parent($parent_entry['id'], [ 'entry.group' => $parent_entry['group'] ]);
+					unset($parent_entry['id']);
+
+					$parent_entry['slugid'] = null;
+
+					unset($parent_entry['lft']);
+					unset($parent_entry['rgt']);
+					$errors = static::tree_push($parent_entry);
+
+					if ($errors !== null)
+					{
+						throw new \app\Exception('Failed to in taccount refactoring process.');
+					}
+
+					$empty_copy = static::$last_inserted_id;
+
+					// move the old entry into the new empty equivalent one
+					static::tree_move_process($input['new_parent'], $empty_copy);
+
+					// update name of old parent to "Other"
+					static::statement
+						(
+							__METHOD__,
+							'
+								UPDATE :table
+								   SET title = "Other"
+								 WHERE id = :old_parent
+							'
+						)
+						->num(':old_parent', $input['new_parent'])
+						->run();
+
+					// make it so the move happens on the new empty parent
+					$input['new_parent'] = $empty_copy;
+				}
+
 				static::tree_move_process($input['taccount'], $input['new_parent']);
 				\app\SQL::commit();
 			}
