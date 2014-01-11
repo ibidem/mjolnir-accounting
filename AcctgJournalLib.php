@@ -57,7 +57,6 @@ class AcctgJournalLib
 	{
 		\app\SQL::prepare
 			(
-				__METHOD__,
 				'
 					INSERT INTO `'.static::table().'`
 						(user, slugid, protected, title)

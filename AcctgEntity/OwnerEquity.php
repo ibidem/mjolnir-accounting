@@ -237,7 +237,6 @@ class AcctgEntity_OwnerEquity extends \app\Instantiatable
 
 			$sql_totals_draws = \app\SQL::prepare
 				(
-					__METHOD__,
 					'
 						SELECT taccount.id taccount,
 							   type.id type,

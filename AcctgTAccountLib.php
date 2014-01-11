@@ -277,7 +277,6 @@ class AcctgTAccountLib
 			// update name of old parent to "Other"
 			static::statement
 				(
-					__METHOD__,
 					'
 						UPDATE :table
 						   SET title = :title
@@ -418,7 +417,6 @@ class AcctgTAccountLib
 					// update name of old parent to "Other"
 					static::statement
 						(
-							__METHOD__,
 							'
 								UPDATE :table
 								   SET title = :title
@@ -554,7 +552,6 @@ class AcctgTAccountLib
 					// update name of old parent to "Other"
 					static::statement
 						(
-							__METHOD__,
 							'
 								UPDATE :table
 								   SET title = :title
