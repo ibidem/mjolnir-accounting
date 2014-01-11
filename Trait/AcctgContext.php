@@ -185,7 +185,7 @@ trait Trait_AcctgContext
 			}
 			else # parent !== null
 			{
-				$acctrefs[$taccount['parent']]['subentries'][] = $taccount;
+				$acctrefs[$taccount['parent']]['subentries'][] = &$taccount;
 			}
 		}
 

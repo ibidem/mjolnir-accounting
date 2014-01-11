@@ -3,6 +3,8 @@
 
 	/* @var $lang Lang */
 
+	isset($show_ids) or $show_ids = true;
+
 	$optypes = \app\CFS::config('mjolnir/types/acctg')['transaction-operation']['types'];
 
 	$monthname = array
@@ -34,7 +36,9 @@
 	<thead class="acctg-journal-head">
 		<tr>
 			<th style="width: 1%" colspan="2">Date</th>
-			<th style="width: 1%; white-space: nowrap">#id</th>
+			<? if ($show_ids): ?>
+				<th style="width: 1%; white-space: nowrap">#id</th>
+			<? endif; ?>
 			<th>Accounts &amp; Description</th>
 			<th style="width: 1%; white-space: nowrap">Debit</th>
 			<th style="width: 1%; white-space: nowrap">Credit</th>
@@ -59,7 +63,7 @@
 				?>
 				<tbody>
 					<tr>
-						<td colspan="9"><?= $year ?></td>
+						<td colspan="<?= $show_ids ? 9 : 8 ?>"><?= $year ?></td>
 					</tr>
 				</tbody>
 			<? endif; ?>
@@ -103,11 +107,13 @@
 												&nbsp;
 											<? endif; ?>
 										</td>
-										<td class="acctg-journal-table--id">
-											<a href="<?= $transaction['action'](null) ?>"><?= \sprintf('%010s', $transaction['id']) ?></a>
-										</td>
+										<? if ($show_ids): ?>
+											<td class="acctg-journal-table--id">
+												<a href="<?= $transaction['action'](null) ?>"><?= \sprintf('%010s', $transaction['id']) ?></a>
+											</td>
+										<? endif; ?>
 									<? else: # not first row ?>
-										<td colspan="3">&nbsp;</td>
+										<td colspan="<?= $show_ids ? 3 : 2 ?>">&nbsp;</td>
 									<? endif; ?>
 
 									<? if ($operation['atomictype'] == $optypes['debit']): ?>
@@ -139,14 +145,14 @@
 								</tr>
 							<? endforeach; ?>
 							<tr class="acctg-journal-table--description-row">
-								<td colspan="3">&nbsp;</td>
+								<td colspan="<?= $show_ids ? 3 : 2 ?>">&nbsp;</td>
 								<td style="text-align: center;">
 									<i><?= $transaction['description'] ?></i>
 								</td>
-								<td colspan="4">&nbsp;</td>
+								<td colspan="<?= $show_ids ? 4 : 3 ?>">&nbsp;</td>
 							</tr>
 							<tr class="acctg-journal-table--delimiter-row">
-								<td colspan="9">
+								<td colspan="<?= $show_ids ? 9 : 8 ?>">
 									&nbsp;
 									<? if ($transaction['method'] === 'manual'): ?>
 										<a href="<?= $transaction['action']('erase') ?>">
@@ -167,7 +173,7 @@
 	<? else: # empty years ?>
 		<tbody class="acctg-journal-table--no-entries">
 			<tr>
-				<td colspan="9">
+				<td colspan="<?= $show_ids ? 9 : 8 ?>">
 					<em>No entries available.</em>
 				</td>
 			</tr>
