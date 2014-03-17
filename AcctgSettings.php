@@ -56,8 +56,8 @@ class AcctgSettings extends \app\Instantiatable
 			// Check for compatibility of type
 			// -------------------------------
 
-			$acct_type = \app\AcctgTAccountType::entry(\app\AcctgTAccountLib::entry($acct)['type']);
-			$target_type = \app\AcctgTAccountTypeLib::named($typecheck);
+			$acct_type = \app\AcctgTAccountTypeLib::entry(\app\AcctgTAccountLib::entry($acct)['type']);
+			$target_type = \app\AcctgTAccountTypeLib::find_entry([ 'slugid' => $typecheck ]);
 
 			if ( ! ($target_type['lft'] <= $acct_type['lft'] && $target_type['rgt'] >= $acct_type['rgt']))
 			{

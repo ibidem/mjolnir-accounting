@@ -20,16 +20,16 @@ class Task_Acctg_Status extends \app\Task_Base
 
 		$group !== false or $group = null;
 
-		$variation = \app\AcctgTAccountLib::check_integrity($group);
+		$variation = \app\AcctgTAccountLib::checksum($group);
 
-		if ($variation === 0)
+		if ($variation == 0)
 		{
-			$this->writer->writef(' Accounting equation satisfied.')->eol();
+			$this->writer->writef(' Accounting equation satisfied. Accounts are balanced.')->eol();
 		}
 		else # equation not satisfied
 		{
 			$error = \number_format($variation, 2);
-			$this->writer->writef(" Accounting equation not satisfied! Error variation of: $error USD")->eol();
+			$this->writer->writef(" Accounting equation not satisfied! Error delta: $error")->eol();
 		}
 	}
 

@@ -55,15 +55,18 @@ class AcctgJournalLib
 	 */
 	static function install(\mjolnir\types\SQLDatabase $db)
 	{
-		\app\AcctgJournalLib::push
+		\app\SQL::prepare
 			(
-				[
-					'title' => 'General Ledger',
-					'slugid' => 'system-ledger',
-					'protected' => true,
-					'user' => null,
-				]
-			);
+				'
+					INSERT INTO `'.static::table().'`
+						(user, slugid, protected, title)
+					VALUES
+						(NULL, :slugid, TRUE, :title)
+				'
+			)
+			->str(':slugid', 'system-ledger')
+			->str(':title', 'General Ledger')
+			->run();
 	}
 
 } # class
